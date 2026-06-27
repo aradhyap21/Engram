@@ -14,9 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
-import memorymesh.ai as ai
-import memorymesh.memory as memory
-import memorymesh.graph as graph
+import ai
+import memory
+import graph
 
 # ---------------------------------------------------------------------------
 # Task 6.1 — Bootstrap: env loading and validation

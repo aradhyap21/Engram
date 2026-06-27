@@ -227,7 +227,7 @@ def top_paths(
     """
     # Import memory here to avoid any potential circular-import issues.
     # memory.py only imports supabase and dotenv — it does NOT import graph.py.
-    import memorymesh.memory as memory  # noqa: PLC0415
+    import memory  # noqa: PLC0415
 
     # ------------------------------------------------------------------
     # Guard: empty graph

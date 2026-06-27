@@ -142,23 +142,23 @@ Build MemoryMesh incrementally: project scaffolding first, then the four Python 
 - [x] 7. Checkpoint — full backend wired and tested
   - Ensure all tests pass (`pytest tests/`). Ask the user if any route or integration questions arise.
 
-- [ ] 8. Build the single-file HTML frontend (`index.html`)
-  - [ ] 8.1 Create the HTML/CSS skeleton with dark theme
+- [x] 8. Build the single-file HTML frontend (`index.html`)
+  - [x] 8.1 Create the HTML/CSS skeleton with dark theme
     - Write `<!DOCTYPE html>` page with inline `<style>` block; dark background (`#1a1a2e` or similar), light text, card component
     - Add `<textarea>` + "Store Memory" button, search `<input>` + "Retrieve" button + "Synthesize" button
     - Add a result `<div id="result-card">` that shows output below the controls
     - No external CSS frameworks, no npm, no bundler — pure HTML/CSS only
     - _Requirements: 8.1, 8.2, 8.4_
 
-  - [ ] 8.2 Implement JavaScript API calls and result rendering
+  - [x] 8.2 Implement JavaScript API calls and result rendering
     - Write `storeMemory()`, `retrieveMemory()`, `synthesizeMemory()` functions using `fetch()` targeting `http://localhost:8000`
     - On success, render paths as readable `node → [relationship] → node` chains inside the result card; render synthesis insight as plain text
     - On fetch or API error, display the error message inside the result card — never silently swallow errors
     - Ensure the file opens correctly via `file://` protocol (no `type="module"` imports, no relative server paths)
     - _Requirements: 8.2, 8.3, 8.5, 8.6_
 
-- [ ] 9. Final integration and wiring
-  - [ ] 9.1 Verify end-to-end flow
+- [x] 9. Final integration and wiring
+  - [x] 9.1 Verify end-to-end flow
     - Confirm `main.py` imports from `ai`, `memory`, `graph` with no circular dependencies
     - Confirm `.env` is not committed (add `.env` to `.gitignore` if a git repo exists)
     - Confirm `requirements.txt` lists every dependency used across all modules
@@ -168,7 +168,7 @@ Build MemoryMesh incrementally: project scaffolding first, then the four Python 
     - Using `TestClient` with real (or local) Supabase test credentials and mocked NVIDIA NIM, store a 3-entity text, retrieve one of those entities, verify a path is returned, verify `strength` increased after retrieval
     - _Requirements: 1.2, 1.3, 2.4, 2.5_
 
-- [ ] 10. Final checkpoint — all tests pass, project is runnable
+- [x] 10. Final checkpoint — all tests pass, project is runnable
   - Run `pytest tests/` and confirm all tests pass
   - Verify the app starts with `uvicorn main:app --reload` from the `memorymesh/` directory
   - Ask the user if any remaining questions arise before handoff.

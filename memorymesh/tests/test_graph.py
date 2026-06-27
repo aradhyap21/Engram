@@ -17,8 +17,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # ---------------------------------------------------------------------------
-# Mock memorymesh.memory at sys.modules level so that top_paths() can do:
-#   import memorymesh.memory as memory
+# Mock memory at sys.modules level so that top_paths() can do:
+#   import memory
 # without hitting Supabase connection code at import time.
 # ---------------------------------------------------------------------------
 
@@ -31,12 +31,12 @@ def _make_memory_mock():
 
 _MEMORY_MOCK = _make_memory_mock()
 
-# Inject the mock BEFORE importing anything from memorymesh.graph so that
-# when top_paths() later executes `import memorymesh.memory as memory`
+# Inject the mock BEFORE importing anything from graph so that
+# when top_paths() later executes `import memory`
 # it gets the mock from sys.modules instead of running memory.py's
 # module-level Supabase connection code.
-if "memorymesh.memory" not in sys.modules:
-    sys.modules["memorymesh.memory"] = _MEMORY_MOCK
+if "memory" not in sys.modules:
+    sys.modules["memory"] = _MEMORY_MOCK
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ def _edge(
 # Import graph functions AFTER sys.modules patching
 # ===========================================================================
 
-from memorymesh.graph import apply_decay, build_adjacency, dijkstra, top_paths  # noqa: E402
+from graph import apply_decay, build_adjacency, dijkstra, top_paths  # noqa: E402
 
 
 # ===========================================================================
