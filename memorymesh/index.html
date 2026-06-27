@@ -3,459 +3,884 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MemoryMesh</title>
+  <title>MemoryMesh — AI-Powered Memory</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
 
     body {
-      background-color: #0d1117;
-      color: #e6edf3;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background-color: #080e12;
+      background-image:
+        radial-gradient(ellipse at 20% 25%, rgba(0,230,210,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 70%, rgba(30,100,255,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 50%, rgba(0,200,180,0.04) 0%, transparent 70%);
+      color: #d0f5f0;
+      font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       line-height: 1.6;
       min-height: 100vh;
-      padding: 40px 16px 80px;
+      position: relative;
+      overflow-x: hidden;
     }
 
-    .container {
-      max-width: 800px;
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 1;
+    }
+
+    body > * { position: relative; z-index: 1; }
+
+    .container { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── NAVBAR ── */
+    #navbar {
+      position: sticky;
+      top: 14px;
+      z-index: 200;
+      padding: 0 20px;
+    }
+    .nav-inner {
+      max-width: 980px;
       margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0d1a20;
+      box-shadow: 0 0 0 1px rgba(0,230,210,0.18), 0 4px 24px rgba(0,0,0,0.5);
+      border-radius: 50px;
+      padding: 10px 26px;
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.45rem;
+      color: #00e6d2;
+      letter-spacing: 3px;
+      text-shadow: 0 0 12px rgba(0,230,210,0.6);
+    }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-link {
+      text-decoration: none;
+      color: #8ecfcc;
+      font-weight: 500;
+      font-size: 0.82rem;
+      padding: 7px 15px;
+      border-radius: 20px;
+      position: relative;
+      transition: color 0.2s, background 0.2s;
+      letter-spacing: 0.3px;
+    }
+    .nav-link:hover { color: #00e6d2; background: rgba(0,230,210,0.08); }
+    .nav-link.active { color: #00e6d2; }
+    .nav-link.active::after {
+      content: '';
+      display: block;
+      width: 5px; height: 5px;
+      background: #00e6d2;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 1px;
+      left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 0 6px #00e6d2;
+    }
+    .nav-badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      background: #00e6d2;
+      color: #080e12;
+      padding: 4px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .nav-logo { font-size: 1.2rem; }
     }
 
-    /* ── Header ── */
-    .header {
-      text-align: center;
-      margin-bottom: 40px;
+    /* ── HERO ── */
+    #home {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      padding: 100px 20px 80px;
+    }
+    .hero-layout {
+      max-width: 980px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+      position: relative;
+      z-index: 2;
+    }
+    .hero-content { flex: 1; min-width: 0; }
+    .hero-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(4.5rem, 9vw, 9rem);
+      color: #00e6d2;
+      line-height: 0.92;
+      letter-spacing: 3px;
+      text-shadow: 0 0 30px rgba(0,230,210,0.5), 0 0 60px rgba(0,230,210,0.2);
+    }
+    .hero-subtitle {
+      font-size: clamp(1rem, 1.8vw, 1.15rem);
+      color: #8ecfcc;
+      margin-top: 20px;
+      font-weight: 400;
+      max-width: 460px;
+    }
+    .hero-jp {
+      font-size: 0.82rem;
+      color: #00e6d2;
+      opacity: 0.55;
+      margin-top: 10px;
+      letter-spacing: 3px;
+    }
+    .hero-badges {
+      display: flex;
+      gap: 10px;
+      margin-top: 22px;
+      flex-wrap: wrap;
+    }
+    .retro-badge {
+      background: #0d1a20;
+      box-shadow: 0 0 0 1px rgba(0,230,210,0.2), 0 2px 8px rgba(0,0,0,0.4);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      color: #5ab8b4;
+      text-transform: uppercase;
+      position: relative;
+    }
+    .retro-badge.orange { color: #00e6d2; }
+    .retro-badge.blue   { color: #3b9eff; }
+    .retro-badge.pricetag {
+      padding-left: 22px;
+      color: #00e6d2;
+    }
+    .retro-badge.pricetag::before {
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      border: 1.5px solid #00e6d2;
+    }
+    .hero-cta {
+      display: flex;
+      gap: 14px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+    .hero-rule {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      border: none;
+      border-top: 1px solid rgba(0,230,210,0.15);
     }
 
-    .header h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: #e6edf3;
+    /* ── HEADPHONE FLOAT ── */
+    .hero-headphone {
+      flex-shrink: 0;
+      width: 160px;
+      animation: hpFloat 3s ease-in-out infinite alternate;
+    }
+    @keyframes hpFloat {
+      from { transform: translateY(0px); }
+      to   { transform: translateY(-18px); }
+    }
+    @media (max-width: 768px) {
+      .hero-layout { flex-direction: column; text-align: center; }
+      .hero-subtitle { max-width: 100%; }
+      .hero-badges, .hero-cta { justify-content: center; }
+      .hero-headphone { width: 110px; order: -1; }
     }
 
-    .header h1 span {
-      color: #7c3aed;
+    /* ── STARBURST ── */
+    .starburst {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .starburst-main {
+      width: 460px; height: 460px;
+      top: 50%; left: 40%;
+      animation: starSpin 30s linear infinite;
+    }
+    .starburst-accent {
+      width: 240px; height: 240px;
+      top: 32%; left: 75%;
+      animation: starSpin 45s linear infinite reverse;
+    }
+    @keyframes starSpin {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to   { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
-    .header p {
-      color: #8b949e;
-      margin-top: 6px;
-      font-size: 0.9rem;
+    /* ── FLOAT DOTS ── */
+    .float-dot {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .fd1{width:12px;height:12px;background:#00e6d2;opacity:0.45;top:14%;left:9%;animation:fdA 10s ease-in-out infinite;box-shadow:0 0 10px #00e6d2;}
+    .fd2{width:8px;height:8px;background:#3b9eff;opacity:0.5;top:22%;left:88%;animation:fdB 14s ease-in-out infinite;box-shadow:0 0 8px #3b9eff;}
+    .fd3{width:16px;height:16px;background:#00e6d2;opacity:0.35;top:72%;left:7%;animation:fdC 12s ease-in-out infinite 2s;box-shadow:0 0 14px #00e6d2;}
+    .fd4{width:10px;height:10px;background:#3b9eff;opacity:0.45;top:78%;left:80%;animation:fdA 18s ease-in-out infinite 1s;box-shadow:0 0 8px #3b9eff;}
+    .fd5{width:14px;height:14px;background:#00e6d2;opacity:0.4;top:48%;left:95%;animation:fdB 9s ease-in-out infinite 3s;box-shadow:0 0 12px #00e6d2;}
+    .fd6{width:8px;height:8px;background:#3b9eff;opacity:0.5;top:8%;left:54%;animation:fdC 20s ease-in-out infinite;box-shadow:0 0 8px #3b9eff;}
+    .fd7{width:12px;height:12px;background:#00e6d2;opacity:0.4;top:90%;left:42%;animation:fdA 15s ease-in-out infinite 4s;box-shadow:0 0 10px #00e6d2;}
+    .fd8{width:10px;height:10px;background:#3b9eff;opacity:0.45;top:58%;left:23%;animation:fdB 11s ease-in-out infinite 2s;box-shadow:0 0 8px #3b9eff;}
+    @keyframes fdA{0%,100%{transform:translate(0,0)}50%{transform:translate(22px,-28px)}}
+    @keyframes fdB{0%,100%{transform:translate(0,0)}33%{transform:translate(-16px,26px)}66%{transform:translate(24px,8px)}}
+    @keyframes fdC{0%,100%{transform:translate(0,0)}50%{transform:translate(-22px,-18px)}}
+
+    /* ── BUTTONS ── */
+    .neo-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #F5ECD7;
+      box-shadow: 6px 6px 12px #c9c2b0, -6px -6px 12px #ffffff;
+      border: none;
+      border-radius: 16px;
+      padding: 12px 28px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.05rem;
+      letter-spacing: 1.5px;
+      color: #1A1410;
+      cursor: pointer;
+      transition: box-shadow 0.15s ease, transform 0.1s ease, color 0.15s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .neo-btn:hover:not(:disabled) {
+      box-shadow: 9px 9px 18px #c9c2b0, -9px -9px 18px #ffffff;
+      color: #E8642A;
+    }
+    .neo-btn:active:not(:disabled) {
+      box-shadow: inset 4px 4px 8px #c9c2b0, inset -4px -4px 8px #ffffff;
+      transform: scale(0.97);
+    }
+    .neo-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .neo-btn.orange { color: #E8642A; }
+    .neo-btn.blue   { color: #2B7FD4; }
+    .neo-btn.outline-blue {
+      color: #2B7FD4;
+      box-shadow: 4px 4px 8px #c9c2b0, -4px -4px 8px #ffffff, inset 0 0 0 1.5px rgba(43,127,212,0.3);
+    }
+    .neo-btn.outline-blue:hover:not(:disabled) {
+      box-shadow: 7px 7px 14px #c9c2b0, -7px -7px 14px #ffffff, inset 0 0 0 1.5px rgba(43,127,212,0.5);
     }
 
-    /* ── Panels ── */
-    .panel {
-      background-color: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 10px;
-      padding: 24px;
+    /* ── SECTIONS ── */
+    .section { padding: 90px 0; position: relative; }
+    .section-inner { position: relative; }
+    .section-num {
+      position: absolute;
+      top: -40px; left: -14px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 9rem;
+      color: rgba(26,20,16,0.035);
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 34px;
+    }
+    .section-accent {
+      width: 5px; height: 44px;
+      background: #E8642A;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .section-accent.blue { background: #2B7FD4; }
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.6rem, 5vw, 4.2rem);
+      color: #1A1410;
+      letter-spacing: 3px;
+      line-height: 1;
+    }
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: #9e8e7e;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .retro-rule {
+      border: none;
+      border-top: 2px dashed rgba(232,100,42,0.25);
+      margin: 0;
+    }
+
+    /* ── CARDS ── */
+    .neo-card {
+      background: #F5ECD7;
+      box-shadow: 6px 6px 12px #c9c2b0, -6px -6px 12px #ffffff;
+      border-radius: 20px;
+      padding: 30px 32px;
       margin-bottom: 20px;
     }
 
-    .panel h2 {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #8b949e;
-      margin-bottom: 14px;
-    }
-
-    /* ── Inputs ── */
-    textarea,
-    input[type="text"] {
+    /* ── INPUTS ── */
+    .neo-textarea, .neo-input {
       width: 100%;
-      background-color: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #e6edf3;
-      font-family: inherit;
-      font-size: 14px;
-      padding: 10px 12px;
-      transition: border-color 0.15s;
+      background: #F5ECD7;
+      box-shadow: inset 4px 4px 9px #c9c2b0, inset -4px -4px 9px #ffffff;
+      border: none;
+      border-radius: 16px;
+      color: #1A1410;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      padding: 14px 20px;
       outline: none;
       resize: vertical;
+      transition: box-shadow 0.2s;
+    }
+    .neo-textarea { min-height: 130px; }
+    .neo-textarea:focus, .neo-input:focus {
+      box-shadow: inset 5px 5px 11px #c9c2b0, inset -5px -5px 11px #ffffff,
+                  0 0 0 2px rgba(232,100,42,0.3);
+    }
+    .neo-textarea::placeholder, .neo-input::placeholder { color: #a09080; }
+
+    .btn-row { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+    @media (max-width: 600px) {
+      .btn-row { flex-direction: column; }
+      .neo-btn { justify-content: center; }
     }
 
-    textarea:focus,
-    input[type="text"]:focus {
-      border-color: #7c3aed;
-      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+    /* ── STATUS ── */
+    #status {
+      font-size: 0.82rem;
+      color: #7a6e65;
+      margin-top: 14px;
+      min-height: 18px;
+      padding-left: 2px;
+      transition: color 0.2s;
     }
+    #status.error { color: #c0392b; }
 
-    textarea {
-      min-height: 110px;
-    }
-
-    textarea::placeholder,
-    input[type="text"]::placeholder {
-      color: #484f58;
-    }
-
-    /* ── Button row ── */
-    .btn-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 12px;
-      flex-wrap: wrap;
-    }
-
-    button {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      background-color: #7c3aed;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 9px 18px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.15s, opacity 0.15s, transform 0.1s;
-      white-space: nowrap;
-    }
-
-    button:hover:not(:disabled) {
-      background-color: #6d28d9;
-    }
-
-    button:active:not(:disabled) {
-      transform: scale(0.97);
-    }
-
-    button:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-
-    button.secondary {
-      background-color: #21262d;
-      border: 1px solid #30363d;
-      color: #e6edf3;
-    }
-
-    button.secondary:hover:not(:disabled) {
-      background-color: #2d333b;
-      border-color: #7c3aed;
-    }
-
-    /* ── Spinner ── */
-    .spinner {
-      width: 13px;
-      height: 13px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
+    /* ── SPINNER ── */
+    .neo-spinner {
+      width: 17px; height: 17px;
+      border: 3px dashed #E8642A;
       border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      animation: neoSpin 0.75s linear infinite;
       display: inline-block;
       flex-shrink: 0;
     }
+    @keyframes neoSpin { to { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* ── Status line ── */
-    #status {
-      font-size: 13px;
-      color: #8b949e;
-      margin-top: 10px;
-      min-height: 18px;
-      transition: color 0.2s;
-    }
-
-    #status.error {
-      color: #f85149;
-    }
-
-    /* ── Result card ── */
-    #result-card {
-      background-color: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 10px;
-      padding: 24px;
-      margin-top: 20px;
+    /* ── STORE RESULT AREA ── */
+    #store-result-area {
+      margin-top: 18px;
+      overflow: hidden;
+      max-height: 0;
       opacity: 0;
-      transform: translateY(10px);
-      transition: opacity 0.25s ease, transform 0.25s ease;
-      pointer-events: none;
+      transition: max-height 0.55s ease, opacity 0.4s ease;
     }
-
-    #result-card.visible {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-
-    #result-card h2 {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #8b949e;
-      margin-bottom: 16px;
-    }
-
-    /* ── Store result ── */
-    .store-result {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
+    #store-result-area.visible { max-height: 320px; opacity: 1; }
+    .store-result { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; }
     .stat-badge {
-      background-color: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 12px 18px;
+      background: #F5ECD7;
+      box-shadow: 4px 4px 9px #c9c2b0, -4px -4px 9px #ffffff;
+      border-radius: 16px;
+      padding: 20px 26px;
       text-align: center;
       flex: 1;
-      min-width: 110px;
+      min-width: 120px;
     }
-
-    .stat-badge .stat-num {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #7c3aed;
+    .stat-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3rem;
+      color: #E8642A;
       line-height: 1;
     }
-
-    .stat-badge .stat-label {
-      font-size: 0.75rem;
-      color: #8b949e;
-      margin-top: 4px;
+    .stat-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #7a6e65;
+      margin-top: 5px;
     }
 
-    /* ── Path chain ── */
-    .paths-list {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
+    /* ── RESULT CARD ── */
+    #result-card {
+      background: #F5ECD7;
+      box-shadow: 6px 6px 12px #c9c2b0, -6px -6px 12px #ffffff;
+      border-radius: 20px;
+      padding: 30px 32px;
+      margin-top: 24px;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      pointer-events: none;
     }
+    #result-card.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    #result-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.9rem;
+      color: #E8642A;
+      letter-spacing: 2px;
+      margin-bottom: 14px;
+    }
+    .divider { height: 1px; background: rgba(26,20,16,0.1); margin: 14px 0 18px; }
 
+    /* ── PATH CARDS ── */
+    .paths-list { display: flex; flex-direction: column; gap: 16px; }
     .path-card {
-      background-color: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 14px 16px;
+      background: #F5ECD7;
+      box-shadow: 4px 4px 9px #c9c2b0, -4px -4px 9px #ffffff;
+      border-radius: 16px;
+      padding: 18px 20px;
+      border-left: 4px solid #E8642A;
+      opacity: 0;
+      transform: translateX(40px);
+      animation: slideInCard 0.42s ease forwards;
+      animation-delay: calc(var(--i,0) * 100ms);
     }
-
+    @keyframes slideInCard { to { opacity:1; transform:translateX(0); } }
     .path-chain {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 6px;
-      font-size: 13.5px;
+      gap: 7px;
+      font-size: 0.875rem;
     }
-
     .chain-node {
-      background-color: #161b22;
-      border: 1px solid #3d3d3d;
-      border-radius: 5px;
-      padding: 3px 10px;
-      color: #e6edf3;
+      background: #FAF6EE;
+      box-shadow: 2px 2px 6px #c9c2b0, -2px -2px 6px #ffffff;
+      border-radius: 9px;
+      padding: 4px 13px;
+      color: #1A1410;
       font-weight: 500;
       white-space: nowrap;
     }
-
-    .chain-arrow {
-      color: #484f58;
-      font-size: 12px;
-    }
-
+    .chain-arrow { color: #b5a898; font-size: 10px; }
     .chain-edge {
-      background-color: rgba(124, 58, 237, 0.15);
-      border: 1px solid rgba(124, 58, 237, 0.35);
+      background: rgba(43,127,212,0.09);
+      border: 1px solid rgba(43,127,212,0.28);
       border-radius: 12px;
-      padding: 2px 10px;
-      color: #a78bfa;
-      font-size: 12px;
+      padding: 3px 11px;
+      color: #2B7FD4;
+      font-size: 0.76rem;
       white-space: nowrap;
     }
-
-    .path-meta {
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
+    .path-meta { margin-top: 10px; }
     .cost-badge {
-      font-size: 11px;
-      color: #8b949e;
-      background-color: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 4px;
-      padding: 2px 7px;
-    }
-
-    /* ── Insight ── */
-    .insight-text {
-      font-size: 15px;
-      line-height: 1.7;
-      color: #e6edf3;
-      white-space: pre-wrap;
-    }
-
-    .insight-sub {
-      margin-top: 14px;
-      font-size: 12px;
-      color: #8b949e;
-    }
-
-    /* ── Error state ── */
-    .error-box {
-      background-color: rgba(248, 81, 73, 0.08);
-      border: 1px solid rgba(248, 81, 73, 0.3);
+      font-size: 0.7rem;
+      color: #7a6e65;
+      background: #FAF6EE;
+      box-shadow: 2px 2px 4px #c9c2b0, -2px -2px 4px #ffffff;
       border-radius: 8px;
-      padding: 14px 16px;
-      color: #f85149;
-      font-size: 13.5px;
+      padding: 3px 10px;
+      display: inline-block;
     }
 
-    .empty-state {
+    /* ── INSIGHT ── */
+    .insight-text { font-size: 1rem; line-height: 1.85; color: #1A1410; white-space: pre-wrap; }
+    .insight-sub { margin-top: 14px; font-size: 0.78rem; color: #7a6e65; }
+
+    /* ── ERROR / EMPTY ── */
+    .error-box {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.22);
+      border-radius: 12px;
+      padding: 14px 18px;
+      color: #c0392b;
+      font-size: 0.9rem;
+    }
+    .empty-state { text-align: center; padding: 28px 0; color: #7a6e65; }
+    .empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+    .star-accent { color: #E8642A; }
+
+    /* ── GRAPH CANVAS ── */
+    .graph-wrapper {
+      background: #FAF6EE;
+      box-shadow: 6px 6px 12px #c9c2b0, -6px -6px 12px #ffffff;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+    #graph-canvas {
+      display: block;
+      width: 100%;
+      height: 420px;
+    }
+    .graph-label {
+      position: absolute;
+      top: 14px; right: 18px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 0.9rem;
+      color: rgba(26,20,16,0.2);
+      letter-spacing: 2px;
+    }
+
+    /* ── PILL BADGE ── */
+    .pill-badge {
+      display: inline-block;
+      background: #F5ECD7;
+      box-shadow: 3px 3px 7px #c9c2b0, -3px -3px 7px #ffffff;
+      border-radius: 20px;
+      padding: 4px 13px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      color: #2B7FD4;
+      text-transform: uppercase;
+      margin-left: 12px;
+    }
+    .pill-badge.orange { color: #E8642A; }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .reveal.revealed { opacity: 1; transform: translateY(0); }
+
+    /* ── FOOTER ── */
+    .footer {
       text-align: center;
-      padding: 20px 0;
-      color: #8b949e;
-      font-size: 13.5px;
+      padding: 40px 20px;
+      font-size: 0.78rem;
+      color: #9e8e7e;
+      letter-spacing: 0.5px;
     }
+    .footer strong { color: #E8642A; font-weight: 600; }
 
-    .empty-state .empty-icon {
-      font-size: 1.8rem;
-      margin-bottom: 8px;
-    }
-
-    /* ── Divider ── */
-    .divider {
-      height: 1px;
-      background-color: #21262d;
-      margin: 6px 0 16px;
+    /* ── SECTION STARBURST (decorative) ── */
+    .section-starburst {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0.07;
+      z-index: 0;
     }
   </style>
 </head>
 <body>
-  <div class="container">
 
-    <!-- Header -->
-    <div class="header">
-      <h1>Memory<span>Mesh</span></h1>
-      <p>Causal graph memory engine with Ebbinghaus decay</p>
+  <!-- ══════════════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════════════ -->
+  <nav id="navbar">
+    <div class="nav-inner">
+      <span class="nav-logo">MemoryMesh</span>
+      <div class="nav-links">
+        <a href="#home"     class="nav-link active">Home</a>
+        <a href="#store"    class="nav-link">Store</a>
+        <a href="#retrieve" class="nav-link">Retrieve</a>
+        <a href="#graph"    class="nav-link">Graph</a>
+      </div>
+      <span class="nav-badge">v1.0 Beta</span>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════ -->
+  <section id="home">
+
+    <!-- Background starbursts -->
+    <svg class="starburst starburst-main" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <polygon points="100,0 107,36 116,10 117,50 134,26 127,62 152,48 137,80 166,74 143,100 166,126 137,120 152,152 127,138 134,174 117,150 116,190 107,164 100,200 93,164 84,190 83,150 66,174 73,138 48,152 63,120 34,126 57,100 34,74 63,80 48,48 73,62 66,26 83,50 84,10 93,36" fill="#E8642A" opacity="0.14"/>
+    </svg>
+    <svg class="starburst starburst-accent" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <polygon points="100,0 107,36 116,10 117,50 134,26 127,62 152,48 137,80 166,74 143,100 166,126 137,120 152,152 127,138 134,174 117,150 116,190 107,164 100,200 93,164 84,190 83,150 66,174 73,138 48,152 63,120 34,126 57,100 34,74 63,80 48,48 73,62 66,26 83,50 84,10 93,36" fill="#2B7FD4" opacity="0.16"/>
+    </svg>
+
+    <!-- Floating circuit nodes -->
+    <div class="float-dot fd1" aria-hidden="true"></div>
+    <div class="float-dot fd2" aria-hidden="true"></div>
+    <div class="float-dot fd3" aria-hidden="true"></div>
+    <div class="float-dot fd4" aria-hidden="true"></div>
+    <div class="float-dot fd5" aria-hidden="true"></div>
+    <div class="float-dot fd6" aria-hidden="true"></div>
+    <div class="float-dot fd7" aria-hidden="true"></div>
+    <div class="float-dot fd8" aria-hidden="true"></div>
+
+    <div class="hero-layout">
+      <!-- LEFT: text content -->
+      <div class="hero-content">
+        <h1 class="hero-heading">MEMORY<br>MESH</h1>
+        <p class="hero-subtitle">Memory that thinks in connections, not keywords</p>
+        <p class="hero-jp">メモリーメッシュ</p>
+
+        <div class="hero-badges">
+          <span class="retro-badge orange">v1.0</span>
+          <span class="retro-badge blue">BETA</span>
+          <span class="retro-badge pricetag">AI-Powered Memory</span>
+        </div>
+
+        <div class="hero-cta">
+          <a href="#store"    class="neo-btn orange" aria-label="Go to Store Memory">▶ Store Memory</a>
+          <a href="#retrieve" class="neo-btn blue"   aria-label="Go to Retrieve">◎ Retrieve</a>
+        </div>
+      </div>
+
+      <!-- RIGHT: floating headphone SVG -->
+      <svg class="hero-headphone" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <!-- Headband arc -->
+        <path d="M30 90 Q30 30 80 30 Q130 30 130 90" fill="none" stroke="#1A1410" stroke-width="7" stroke-linecap="round"/>
+        <!-- Band highlight -->
+        <path d="M34 88 Q34 36 80 36 Q126 36 126 88" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="3" stroke-linecap="round"/>
+
+        <!-- Left ear cup outer -->
+        <ellipse cx="26" cy="100" rx="20" ry="24" fill="#E8642A"/>
+        <!-- Left cup inner cushion -->
+        <ellipse cx="26" cy="100" rx="13" ry="17" fill="#c0521f"/>
+        <!-- Left cup center -->
+        <ellipse cx="26" cy="100" rx="6" ry="8" fill="#FAF6EE"/>
+        <!-- Left cup detail lines -->
+        <line x1="20" y1="98" x2="32" y2="98" stroke="#E8642A" stroke-width="1.5" opacity="0.5"/>
+        <line x1="20" y1="102" x2="32" y2="102" stroke="#E8642A" stroke-width="1.5" opacity="0.5"/>
+
+        <!-- Right ear cup outer -->
+        <ellipse cx="134" cy="100" rx="20" ry="24" fill="#2B7FD4"/>
+        <!-- Right cup inner cushion -->
+        <ellipse cx="134" cy="100" rx="13" ry="17" fill="#1d62a8"/>
+        <!-- Right cup center -->
+        <ellipse cx="134" cy="100" rx="6" ry="8" fill="#FAF6EE"/>
+        <!-- Right cup detail lines -->
+        <line x1="128" y1="98" x2="140" y2="98" stroke="#2B7FD4" stroke-width="1.5" opacity="0.5"/>
+        <line x1="128" y1="102" x2="140" y2="102" stroke="#2B7FD4" stroke-width="1.5" opacity="0.5"/>
+
+        <!-- Cable/wire from left cup -->
+        <path d="M26 124 Q26 148 50 148 L80 148" fill="none" stroke="#1A1410" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+        <!-- Mic nub -->
+        <rect x="74" y="143" width="12" height="10" rx="3" fill="#E8642A" opacity="0.7"/>
+
+        <!-- Small retro bolt accents on headband -->
+        <circle cx="56" cy="40" r="3" fill="#E8642A" opacity="0.6"/>
+        <circle cx="104" cy="40" r="3" fill="#2B7FD4" opacity="0.6"/>
+      </svg>
     </div>
 
-    <!-- Store Memory panel -->
-    <div class="panel">
-      <h2>Store Memory</h2>
-      <textarea
-        id="memory-text"
-        placeholder="Enter text to store as memory..."
-      ></textarea>
-      <div class="btn-row">
-        <button id="store-btn" onclick="storeMemory()">Store Memory</button>
+    <hr class="hero-rule">
+  </section>
+
+  <hr class="retro-rule">
+
+  <!-- ══════════════════════════════════════════
+       STORE SECTION
+  ══════════════════════════════════════════ -->
+  <section id="store" class="section">
+    <!-- Decorative starburst -->
+    <svg class="section-starburst" style="right:-60px;top:-80px;width:280px;height:280px;" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <polygon points="100,0 107,36 116,10 117,50 134,26 127,62 152,48 137,80 166,74 143,100 166,126 137,120 152,152 127,138 134,174 117,150 116,190 107,164 100,200 93,164 84,190 83,150 66,174 73,138 48,152 63,120 34,126 57,100 34,74 63,80 48,48 73,62 66,26 83,50 84,10 93,36" fill="#2B7FD4"/>
+    </svg>
+
+    <div class="container">
+      <div class="section-inner reveal">
+        <div class="section-num" aria-hidden="true">01</div>
+        <div class="section-label">✦ Memory Graph</div>
+        <div class="section-head">
+          <div class="section-accent"></div>
+          <h2 class="section-title">01 // STORE</h2>
+          <span class="pill-badge orange">graph memory</span>
+        </div>
+
+        <div class="neo-card">
+          <textarea
+            id="memory-text"
+            class="neo-textarea"
+            placeholder="Enter text to store as memory… (Ctrl+Enter to submit)"
+            aria-label="Memory text to store"
+          ></textarea>
+
+          <div class="btn-row">
+            <button id="store-btn" class="neo-btn orange" onclick="storeMemory()">▶ Store Memory</button>
+          </div>
+
+          <div id="store-result-area" role="region" aria-live="polite" aria-label="Store result">
+            <div class="divider"></div>
+            <div id="store-stats" class="store-result"></div>
+          </div>
+        </div>
+
+        <div id="status" role="status" aria-live="polite"></div>
       </div>
     </div>
+  </section>
 
-    <!-- Retrieve / Synthesize panel -->
-    <div class="panel">
-      <h2>Retrieve &amp; Synthesize</h2>
-      <input
-        type="text"
-        id="query-input"
-        placeholder="Search your memories..."
-      />
-      <div class="btn-row">
-        <button id="retrieve-btn" onclick="retrieveMemory()">Retrieve</button>
-        <button id="synthesize-btn" class="secondary" onclick="synthesizeMemory()">Synthesize</button>
+  <hr class="retro-rule">
+
+  <!-- ══════════════════════════════════════════
+       RETRIEVE SECTION
+  ══════════════════════════════════════════ -->
+  <section id="retrieve" class="section">
+    <!-- Decorative starburst -->
+    <svg class="section-starburst" style="left:-50px;top:-60px;width:240px;height:240px;" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <polygon points="100,0 107,36 116,10 117,50 134,26 127,62 152,48 137,80 166,74 143,100 166,126 137,120 152,152 127,138 134,174 117,150 116,190 107,164 100,200 93,164 84,190 83,150 66,174 73,138 48,152 63,120 34,126 57,100 34,74 63,80 48,48 73,62 66,26 83,50 84,10 93,36" fill="#E8642A"/>
+    </svg>
+
+    <div class="container">
+      <div class="section-inner reveal">
+        <div class="section-num" aria-hidden="true">02</div>
+        <div class="section-label">✦ Semantic Search</div>
+        <div class="section-head">
+          <div class="section-accent blue"></div>
+          <h2 class="section-title">02 // RETRIEVE</h2>
+          <span class="pill-badge">semantic search</span>
+        </div>
+
+        <div class="neo-card">
+          <input
+            type="text"
+            id="query-input"
+            class="neo-input"
+            placeholder="Search your memories… (Enter to retrieve)"
+            aria-label="Search query"
+          />
+
+          <div class="btn-row">
+            <button id="retrieve-btn"  class="neo-btn orange"       onclick="retrieveMemory()">◎ Retrieve</button>
+            <button id="synthesize-btn" class="neo-btn outline-blue" onclick="synthesizeMemory()">✦ Synthesize</button>
+          </div>
+        </div>
+
+        <div id="result-card" role="region" aria-live="polite" aria-label="Retrieval results">
+          <div id="result-title">Result</div>
+          <div class="divider"></div>
+          <div id="result-body"></div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <!-- Status -->
-    <div id="status"></div>
+  <hr class="retro-rule">
 
-    <!-- Result card (hidden by default) -->
-    <div id="result-card">
-      <h2 id="result-title">Result</h2>
-      <div class="divider"></div>
-      <div id="result-body"></div>
+  <!-- ══════════════════════════════════════════
+       GRAPH SECTION
+  ══════════════════════════════════════════ -->
+  <section id="graph" class="section">
+    <div class="container">
+      <div class="section-inner reveal">
+        <div class="section-num" aria-hidden="true">03</div>
+        <div class="section-label">✦ Live Visualization</div>
+        <div class="section-head">
+          <div class="section-accent"></div>
+          <h2 class="section-title">03 // GRAPH</h2>
+          <span class="pill-badge">live viz</span>
+        </div>
+
+        <div class="graph-wrapper">
+          <canvas id="graph-canvas" width="960" height="420" aria-label="Memory graph visualization"></canvas>
+          <div class="graph-label" aria-hidden="true">MEMORY GRAPH</div>
+        </div>
+      </div>
     </div>
+  </section>
 
-  </div>
+  <!-- ══════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════ -->
+  <footer class="footer">
+    <p><strong>MemoryMesh</strong> &nbsp;✦&nbsp; v1.0 Beta &nbsp;·&nbsp; AI-Powered Graph Memory &nbsp;·&nbsp; メモリーメッシュ</p>
+  </footer>
 
+  <!-- ══════════════════════════════════════════
+       JAVASCRIPT
+  ══════════════════════════════════════════ -->
   <script>
-    const API_BASE = "http://localhost:8000";
+    'use strict';
 
-    /* ── Helpers ── */
+    /* ────────────────────────────────────────
+       CONFIG
+    ──────────────────────────────────────── */
+    var API_BASE = 'http://localhost:8000';
+
+    /* ────────────────────────────────────────
+       HELPERS
+    ──────────────────────────────────────── */
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
     function setStatus(msg, isError) {
-      const el = document.getElementById("status");
+      var el = document.getElementById('status');
       el.textContent = msg;
-      el.className = isError ? "error" : "";
+      el.className = isError ? 'error' : '';
     }
 
     function showResult(titleText, bodyHTML) {
-      document.getElementById("result-title").textContent = titleText;
-      document.getElementById("result-body").innerHTML = bodyHTML;
-      const card = document.getElementById("result-card");
-      card.classList.add("visible");
+      document.getElementById('result-title').textContent = titleText;
+      document.getElementById('result-body').innerHTML = bodyHTML;
+      var card = document.getElementById('result-card');
+      card.classList.add('visible');
     }
 
     function setLoading(btnId, loading) {
-      const btn = document.getElementById(btnId);
+      var btn = document.getElementById(btnId);
+      if (!btn) return;
       if (loading) {
         btn.disabled = true;
-        btn.dataset.originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="spinner"></span>Loading...';
+        btn.dataset.originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="neo-spinner" aria-hidden="true"></span> Thinking…';
       } else {
         btn.disabled = false;
-        if (btn.dataset.originalText) {
-          btn.innerHTML = btn.dataset.originalText;
-        }
+        if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
       }
     }
 
-    function disableAllButtons(disabled) {
-      ["store-btn", "retrieve-btn", "synthesize-btn"].forEach(function(id) {
-        document.getElementById(id).disabled = disabled;
+    function disableAll(disabled) {
+      ['store-btn', 'retrieve-btn', 'synthesize-btn'].forEach(function(id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.disabled = disabled;
       });
     }
 
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
-
     function showError(message) {
-      showResult("Error", '<div class="error-box">' + escapeHtml(message) + '</div>');
-      setStatus("Request failed.", true);
+      showResult('Error', '<div class="error-box">' + escapeHtml(message) + '</div>');
+      setStatus('Request failed.', true);
     }
 
-    /* ── Store Memory ── */
-
+    /* ────────────────────────────────────────
+       STORE MEMORY
+    ──────────────────────────────────────── */
     function storeMemory() {
-      var text = document.getElementById("memory-text").value.trim();
+      var text = document.getElementById('memory-text').value.trim();
+      if (!text) { setStatus('Please enter some text before storing.', true); return; }
 
-      if (!text) {
-        setStatus("Please enter some text before storing.", true);
-        return;
-      }
+      setStatus('Storing memory…', false);
+      setLoading('store-btn', true);
+      disableAll(true);
 
-      setStatus("Storing memory…", false);
-      setLoading("store-btn", true);
-      disableAllButtons(true);
-      document.getElementById("store-btn").disabled = true; // already set but be explicit
-
-      fetch(API_BASE + "/memory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      fetch(API_BASE + '/memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text })
       })
       .then(function(res) {
@@ -464,196 +889,530 @@
         });
       })
       .then(function(result) {
-        disableAllButtons(false);
-        setLoading("store-btn", false);
-
-        if (!result.ok || result.data.error) {
-          var errMsg = (result.data && result.data.error) || ("Server error " + result.status);
-          showError(errMsg);
+        disableAll(false);
+        setLoading('store-btn', false);
+        if (!result.ok || (result.data && result.data.error)) {
+          showError((result.data && result.data.error) || ('Server error ' + result.status));
           return;
         }
-
         var d = result.data;
-        var nodes = d.nodes_stored !== undefined ? d.nodes_stored : "?";
-        var edges = d.edges_stored !== undefined ? d.edges_stored : "?";
+        var nodes = d.nodes_stored !== undefined ? d.nodes_stored : '?';
+        var edges = d.edges_stored !== undefined ? d.edges_stored : '?';
 
-        var html =
-          '<div class="store-result">' +
-            '<div class="stat-badge">' +
-              '<div class="stat-num">' + escapeHtml(String(nodes)) + '</div>' +
-              '<div class="stat-label">Nodes stored</div>' +
-            '</div>' +
-            '<div class="stat-badge">' +
-              '<div class="stat-num">' + escapeHtml(String(edges)) + '</div>' +
-              '<div class="stat-label">Edges stored</div>' +
-            '</div>' +
-          '</div>';
+        var badge = function(num, label) {
+          return '<div class="stat-badge">' +
+            '<div class="stat-num">' + escapeHtml(String(num)) + '</div>' +
+            '<div class="stat-label">' + label + '</div></div>';
+        };
 
-        showResult("Memory Stored", html);
-        setStatus("Stored " + nodes + " nodes, " + edges + " edges.", false);
-        document.getElementById("memory-text").value = "";
+        document.getElementById('store-stats').innerHTML =
+          badge(nodes, 'Nodes Stored') + badge(edges, 'Edges Stored');
+        document.getElementById('store-result-area').classList.add('visible');
+
+        showResult('✦ Memory Stored',
+          '<div class="store-result">' + badge(nodes, 'Nodes Stored') + badge(edges, 'Edges Stored') + '</div>');
+        setStatus('Stored ' + nodes + ' nodes, ' + edges + ' edges.', false);
+        document.getElementById('memory-text').value = '';
+
+        if (d.node_ids && d.node_ids.length) {
+          var gNodes = d.node_ids.map(function(id) {
+            return { id: id, label: String(id).slice(0, 14) };
+          });
+          var gEdges = [];
+          for (var i = 0; i < gNodes.length - 1; i++) gEdges.push({ from: i, to: i + 1 });
+          drawGraph(gNodes, gEdges);
+        } else {
+          refreshGraph();
+        }
       })
       .catch(function(err) {
-        disableAllButtons(false);
-        setLoading("store-btn", false);
-        showError("Network error: " + err.message);
+        disableAll(false);
+        setLoading('store-btn', false);
+        showError('Network error: ' + err.message);
       });
     }
 
-    /* ── Retrieve Memory ── */
-
+    /* ────────────────────────────────────────
+       RETRIEVE MEMORY
+    ──────────────────────────────────────── */
     function retrieveMemory() {
-      var query = document.getElementById("query-input").value.trim();
+      var query = document.getElementById('query-input').value.trim();
+      if (!query) { setStatus('Please enter a search query.', true); return; }
 
-      if (!query) {
-        setStatus("Please enter a search query.", true);
-        return;
-      }
+      setStatus('Retrieving memory paths…', false);
+      setLoading('retrieve-btn', true);
+      disableAll(true);
 
-      setStatus("Retrieving memory paths…", false);
-      setLoading("retrieve-btn", true);
-      disableAllButtons(true);
-
-      fetch(API_BASE + "/memory/retrieve?query=" + encodeURIComponent(query))
+      fetch(API_BASE + '/memory/retrieve?query=' + encodeURIComponent(query))
       .then(function(res) {
         return res.json().then(function(data) {
           return { ok: res.ok, status: res.status, data: data };
         });
       })
       .then(function(result) {
-        disableAllButtons(false);
-        setLoading("retrieve-btn", false);
-
-        if (!result.ok || result.data.error) {
-          var errMsg = (result.data && result.data.error) || ("Server error " + result.status);
-          showError(errMsg);
+        disableAll(false);
+        setLoading('retrieve-btn', false);
+        if (!result.ok || (result.data && result.data.error)) {
+          showError((result.data && result.data.error) || ('Server error ' + result.status));
           return;
         }
-
         var paths = result.data.paths || [];
-        var html = renderPaths(paths);
-        showResult("Memory Paths", html);
-        setStatus("Found " + paths.length + " path" + (paths.length !== 1 ? "s" : "") + " for \"" + escapeHtml(query) + "\".", false);
+        showResult('◎ Memory Paths', renderPaths(paths));
+        setStatus(
+          'Found ' + paths.length + ' path' + (paths.length !== 1 ? 's' : '') +
+          ' for "' + escapeHtml(query) + '".',
+          false
+        );
       })
       .catch(function(err) {
-        disableAllButtons(false);
-        setLoading("retrieve-btn", false);
-        showError("Network error: " + err.message);
+        disableAll(false);
+        setLoading('retrieve-btn', false);
+        showError('Network error: ' + err.message);
       });
     }
 
-    /* ── Synthesize Memory ── */
-
+    /* ────────────────────────────────────────
+       SYNTHESIZE MEMORY
+    ──────────────────────────────────────── */
     function synthesizeMemory() {
-      var query = document.getElementById("query-input").value.trim();
+      var query = document.getElementById('query-input').value.trim();
+      if (!query) { setStatus('Please enter a search query.', true); return; }
 
-      if (!query) {
-        setStatus("Please enter a search query.", true);
-        return;
-      }
+      setStatus('Synthesizing insight…', false);
+      setLoading('synthesize-btn', true);
+      disableAll(true);
 
-      setStatus("Synthesizing insight…", false);
-      setLoading("synthesize-btn", true);
-      disableAllButtons(true);
-
-      fetch(API_BASE + "/memory/synthesize?query=" + encodeURIComponent(query))
+      fetch(API_BASE + '/memory/synthesize?query=' + encodeURIComponent(query))
       .then(function(res) {
         return res.json().then(function(data) {
           return { ok: res.ok, status: res.status, data: data };
         });
       })
       .then(function(result) {
-        disableAllButtons(false);
-        setLoading("synthesize-btn", false);
-
-        if (!result.ok || result.data.error) {
-          var errMsg = (result.data && result.data.error) || ("Server error " + result.status);
-          showError(errMsg);
+        disableAll(false);
+        setLoading('synthesize-btn', false);
+        if (!result.ok || (result.data && result.data.error)) {
+          showError((result.data && result.data.error) || ('Server error ' + result.status));
           return;
         }
-
         var d = result.data;
-        var insight = d.insight || "(no insight returned)";
-        var pathsUsed = d.paths_used !== undefined ? d.paths_used : "?";
-
-        var html =
+        var insight = d.insight || '(no insight returned)';
+        var pathsUsed = d.paths_used !== undefined ? d.paths_used : '?';
+        showResult('✦ Synthesized Insight',
           '<p class="insight-text">' + escapeHtml(insight) + '</p>' +
-          '<p class="insight-sub">Based on ' + escapeHtml(String(pathsUsed)) + ' path' + (pathsUsed !== 1 ? 's' : '') + '</p>';
-
-        showResult("Synthesized Insight", html);
-        setStatus("Synthesis complete.", false);
+          '<p class="insight-sub">Based on ' + escapeHtml(String(pathsUsed)) +
+          ' path' + (pathsUsed !== 1 ? 's' : '') + '</p>');
+        setStatus('Synthesis complete.', false);
       })
       .catch(function(err) {
-        disableAllButtons(false);
-        setLoading("synthesize-btn", false);
-        showError("Network error: " + err.message);
+        disableAll(false);
+        setLoading('synthesize-btn', false);
+        showError('Network error: ' + err.message);
       });
     }
 
-    /* ── Path rendering ── */
-
+    /* ────────────────────────────────────────
+       RENDER PATHS
+    ──────────────────────────────────────── */
     function renderPaths(paths) {
       if (!paths || paths.length === 0) {
-        return (
-          '<div class="empty-state">' +
-            '<div class="empty-icon">🔍</div>' +
-            '<div>No memory paths found.<br>Try storing some memories first.</div>' +
-          '</div>'
-        );
+        return '<div class="empty-state"><div class="empty-icon">◎</div>' +
+               '<p>No memory paths found.</p></div>';
       }
-
       var html = '<div class="paths-list">';
-
-      for (var i = 0; i < paths.length; i++) {
-        var p = paths[i];
-        var nodes = p.path || [];
-        var edges = p.edges || [];
-        var totalCost = (p.total_cost !== undefined) ? Number(p.total_cost).toFixed(4) : "?";
-
-        html += '<div class="path-card"><div class="path-chain">';
-
-        for (var n = 0; n < nodes.length; n++) {
-          var node = nodes[n];
-          var label = node.content ? escapeHtml(node.content) : escapeHtml(node.id || "?");
-          html += '<span class="chain-node" title="' + escapeHtml(node.entity_type || "") + '">' + label + '</span>';
-
-          // Insert the edge between this node and the next
-          if (n < edges.length) {
-            var edge = edges[n];
-            var rel = edge.relationship ? escapeHtml(edge.relationship) : "→";
-            html += '<span class="chain-arrow">›</span>';
-            html += '<span class="chain-edge">' + rel + '</span>';
-            html += '<span class="chain-arrow">›</span>';
+      paths.forEach(function(path, i) {
+        html += '<div class="path-card" style="--i:' + i + '">';
+        html += '<div class="path-chain">';
+        var nodes = path.nodes || [];
+        var edges = path.edges || [];
+        nodes.forEach(function(node, ni) {
+          if (ni > 0 && edges[ni - 1]) {
+            html += '<span class="chain-arrow">▸</span>';
+            html += '<span class="chain-edge">' + escapeHtml(String(edges[ni - 1])) + '</span>';
+            html += '<span class="chain-arrow">▸</span>';
           }
+          html += '<span class="chain-node">' + escapeHtml(String(node)) + '</span>';
+        });
+        html += '</div>';
+        if (path.cost !== undefined) {
+          html += '<div class="path-meta"><span class="cost-badge">cost: ' +
+                  escapeHtml(String(path.cost)) + '</span></div>';
         }
-
         html += '</div>';
-        html +=
-          '<div class="path-meta">' +
-            '<span class="cost-badge">cost: ' + totalCost + '</span>' +
-          '</div>';
-        html += '</div>';
-      }
-
+      });
       html += '</div>';
       return html;
     }
 
-    /* ── Keyboard shortcut: Enter in query box triggers retrieve ── */
-    document.getElementById("query-input").addEventListener("keydown", function(e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        retrieveMemory();
+    /* ────────────────────────────────────────
+       GRAPH CANVAS DRAW
+    ──────────────────────────────────────── */
+    var graphNodes = [];
+    var graphEdgeList = [];
+    var pulseAngle = 0;
+
+    function drawGraph(nodes, edges) {
+      graphNodes = nodes || [];
+      graphEdgeList = edges || [];
+      renderCanvas();
+    }
+
+    function renderCanvas() {
+      var canvas = document.getElementById('graph-canvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var W = canvas.offsetWidth;
+      var H = canvas.offsetHeight || 420;
+      canvas.width = W;
+      canvas.height = H;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Background
+      ctx.fillStyle = '#FAF6EE';
+      ctx.fillRect(0, 0, W, H);
+
+      if (graphNodes.length === 0) {
+        ctx.fillStyle = 'rgba(26,20,16,0.2)';
+        ctx.font = "16px 'DM Sans', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText('No nodes yet — store some memories first', W / 2, H / 2);
+        return;
       }
+
+      var n = graphNodes.length;
+      var positions = [];
+      var colors = ['#E8642A', '#2B7FD4'];
+
+      // Arrange nodes in an ellipse
+      for (var i = 0; i < n; i++) {
+        var angle = (2 * Math.PI * i / n) - Math.PI / 2;
+        var rx = Math.min(W * 0.38, 300);
+        var ry = Math.min(H * 0.36, 150);
+        positions.push({
+          x: W / 2 + rx * Math.cos(angle),
+          y: H / 2 + ry * Math.sin(angle)
+        });
+      }
+
+      // Draw edges
+      graphEdgeList.forEach(function(e) {
+        var a = positions[e.from];
+        var b = positions[e.to];
+        if (!a || !b) return;
+        var grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+        grad.addColorStop(0,   'rgba(232,100,42,0.35)');
+        grad.addColorStop(0.5, 'rgba(43,127,212,0.25)');
+        grad.addColorStop(1,   'rgba(43,127,212,0.35)');
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+
+      // Draw nodes
+      positions.forEach(function(pos, i) {
+        var color = colors[i % 2];
+        var pulse = 4 + 3 * Math.abs(Math.sin(pulseAngle + i * 0.7));
+
+        // Pulse ring
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 18 + pulse, 0, 2 * Math.PI);
+        ctx.strokeStyle = color.replace(')', ',0.18)').replace('rgb', 'rgba');
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Node circle
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 16, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Inner highlight
+        ctx.beginPath();
+        ctx.arc(pos.x - 4, pos.y - 4, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fill();
+
+        // Label
+        var label = (graphNodes[i] && graphNodes[i].label) ? String(graphNodes[i].label) : String(i);
+        if (label.length > 12) label = label.slice(0, 12) + '…';
+        ctx.fillStyle = '#1A1410';
+        ctx.font = "11px 'DM Sans', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText(label, pos.x, pos.y + 30);
+      });
+    }
+
+    // Animate pulse rings
+    function animateGraph() {
+      pulseAngle += 0.04;
+      if (graphNodes.length > 0) renderCanvas();
+      requestAnimationFrame(animateGraph);
+    }
+
+    /* ────────────────────────────────────────
+       REFRESH GRAPH FROM API
+    ──────────────────────────────────────── */
+    function refreshGraph() {
+      fetch(API_BASE + '/memory/retrieve?query=memory')
+      .then(function(res) { return res.ok ? res.json() : null; })
+      .then(function(data) {
+        if (!data || !data.paths) return;
+        var nodeMap = {};
+        var nodeList = [];
+        var edgeList = [];
+
+        data.paths.forEach(function(path) {
+          var nodes = path.nodes || [];
+          var prevIdx = -1;
+          nodes.forEach(function(nodeStr) {
+            var key = String(nodeStr);
+            if (!(key in nodeMap)) {
+              nodeMap[key] = nodeList.length;
+              nodeList.push({ id: key, label: key.slice(0, 14) });
+            }
+            var curIdx = nodeMap[key];
+            if (prevIdx >= 0 && prevIdx !== curIdx) {
+              edgeList.push({ from: prevIdx, to: curIdx });
+            }
+            prevIdx = curIdx;
+          });
+        });
+
+        drawGraph(nodeList, edgeList);
+      })
+      .catch(function() { /* silent — graph just stays empty */ });
+    }
+
+    /* ────────────────────────────────────────
+       INTERSECTION OBSERVER — scroll reveal
+    ──────────────────────────────────────── */
+    function initReveal() {
+      if (!window.IntersectionObserver) {
+        document.querySelectorAll('.reveal').forEach(function(el) {
+          el.classList.add('revealed');
+        });
+        return;
+      }
+      var io = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+
+      document.querySelectorAll('.reveal').forEach(function(el) {
+        io.observe(el);
+      });
+    }
+
+    /* ────────────────────────────────────────
+       INTERSECTION OBSERVER — active nav link
+    ──────────────────────────────────────── */
+    function initNavHighlight() {
+      if (!window.IntersectionObserver) return;
+      var sections = document.querySelectorAll('section[id]');
+      var links    = document.querySelectorAll('.nav-link');
+
+      var navIO = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            var id = entry.target.id;
+            links.forEach(function(link) {
+              var href = link.getAttribute('href');
+              if (href === '#' + id) {
+                link.classList.add('active');
+              } else {
+                link.classList.remove('active');
+              }
+            });
+          }
+        });
+      }, { threshold: 0.3 });
+
+      sections.forEach(function(sec) { navIO.observe(sec); });
+    }
+
+    /* ────────────────────────────────────────
+       KEYBOARD SHORTCUTS
+    ──────────────────────────────────────── */
+    function initKeyboard() {
+      document.getElementById('memory-text').addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+          e.preventDefault();
+          storeMemory();
+        }
+      });
+
+      document.getElementById('query-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          retrieveMemory();
+        }
+      });
+    }
+
+    /* ────────────────────────────────────────
+       LERP SMOOTH SCROLL (premium feel)
+    ──────────────────────────────────────── */
+    (function() {
+      var target = window.scrollY;
+      var current = window.scrollY;
+      var ticking = false;
+
+      document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function(e) {
+          var id = this.getAttribute('href').slice(1);
+          var el = document.getElementById(id);
+          if (el) {
+            e.preventDefault();
+            target = el.getBoundingClientRect().top + window.scrollY - 80;
+          }
+        });
+      });
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      function smoothLoop() {
+        current = lerp(current, target, 0.1);
+        if (Math.abs(target - current) > 0.5) {
+          window.scrollTo(0, current);
+          requestAnimationFrame(smoothLoop);
+        } else {
+          window.scrollTo(0, target);
+          ticking = false;
+        }
+      }
+
+      document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function() {
+          if (!ticking) {
+            ticking = true;
+            current = window.scrollY;
+            requestAnimationFrame(smoothLoop);
+          }
+        });
+      });
+    })();
+
+    /* ────────────────────────────────────────
+       CURSOR SPARKLES
+    ──────────────────────────────────────── */
+    (function() {
+      // 4-pointed star SVG path — the same shape as in the poster
+      var STAR_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><polygon points="20,0 23,17 40,20 23,23 20,40 17,23 0,20 17,17" fill="{COLOR}"/></svg>';
+
+      // Colour palette: alternate between gold/yellow, orange, blue
+      var COLORS = ['#F5C518', '#E8642A', '#F0D060', '#2B7FD4', '#F5A623'];
+
+      var pool = [];   // reuse DOM nodes
+      var lastX = -999, lastY = -999;
+      var SPAWN_DIST = 12;  // px moved before spawning a new sparkle
+
+      function getNode() {
+        for (var i = 0; i < pool.length; i++) {
+          if (!pool[i]._active) return pool[i];
+        }
+        var el = document.createElement('div');
+        el.setAttribute('aria-hidden', 'true');
+        el.style.cssText = [
+          'position:fixed',
+          'pointer-events:none',
+          'z-index:9999',
+          'transform-origin:center center',
+          'will-change:transform,opacity'
+        ].join(';');
+        document.body.appendChild(el);
+        pool.push(el);
+        return el;
+      }
+
+      function spawnSparkle(x, y) {
+        var el = getNode();
+        el._active = true;
+
+        // Random properties
+        var size    = 14 + Math.random() * 22;        // 14–36 px
+        var color   = COLORS[Math.floor(Math.random() * COLORS.length)];
+        var angle   = Math.random() * 360;            // initial rotation
+        var dAngle  = (Math.random() - 0.5) * 180;   // spin during fade
+        var dx      = (Math.random() - 0.5) * 40;    // drift x
+        var dy      = -20 - Math.random() * 40;       // always drift up
+        var dur     = 600 + Math.random() * 500;      // 600–1100 ms
+
+        var svgData = 'data:image/svg+xml;base64,' +
+          btoa(STAR_SVG.replace('{COLOR}', color));
+
+        el.style.width  = size + 'px';
+        el.style.height = size + 'px';
+        el.style.backgroundImage  = 'url("' + svgData + '")';
+        el.style.backgroundSize   = 'contain';
+        el.style.backgroundRepeat = 'no-repeat';
+        el.style.left    = (x - size / 2) + 'px';
+        el.style.top     = (y - size / 2) + 'px';
+        el.style.opacity = '1';
+        el.style.transform = 'rotate(' + angle + 'deg) scale(1)';
+        el.style.transition = 'none';
+
+        var start = null;
+        function step(ts) {
+          if (!start) start = ts;
+          var p = Math.min((ts - start) / dur, 1);   // 0 → 1
+          var eased = 1 - Math.pow(p, 1.5);           // fast-fade
+
+          el.style.opacity   = eased;
+          el.style.transform = 'rotate(' + (angle + dAngle * p) + 'deg) scale(' + (1 - p * 0.4) + ')';
+          el.style.left = (x - size / 2 + dx * p) + 'px';
+          el.style.top  = (y - size / 2 + dy * p) + 'px';
+
+          if (p < 1) {
+            requestAnimationFrame(step);
+          } else {
+            el.style.opacity = '0';
+            el._active = false;
+          }
+        }
+        requestAnimationFrame(step);
+      }
+
+      document.addEventListener('mousemove', function(e) {
+        var x = e.clientX, y = e.clientY;
+        var d = Math.hypot(x - lastX, y - lastY);
+        if (d < SPAWN_DIST) return;
+        lastX = x; lastY = y;
+
+        // Spawn 1–2 sparkles per movement chunk
+        var count = Math.random() < 0.35 ? 2 : 1;
+        for (var i = 0; i < count; i++) {
+          // Slight jitter around cursor
+          var jx = x + (Math.random() - 0.5) * 16;
+          var jy = y + (Math.random() - 0.5) * 16;
+          spawnSparkle(jx, jy);
+        }
+      });
+    })();
+
+    /* ────────────────────────────────────────
+       INIT
+    ──────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', function() {
+      initReveal();
+      initNavHighlight();
+      initKeyboard();
+      animateGraph();
+      refreshGraph();
     });
 
-    /* ── Keyboard shortcut: Ctrl+Enter in textarea triggers store ── */
-    document.getElementById("memory-text").addEventListener("keydown", function(e) {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        storeMemory();
-      }
-    });
   </script>
 </body>
 </html>
