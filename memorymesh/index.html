@@ -10,11 +10,7 @@
     html { scroll-behavior: smooth; }
 
     body {
-      background-color: #080e12;
-      background-image:
-        radial-gradient(ellipse at 20% 25%, rgba(0,230,210,0.07) 0%, transparent 55%),
-        radial-gradient(ellipse at 80% 70%, rgba(30,100,255,0.07) 0%, transparent 55%),
-        radial-gradient(ellipse at 50% 50%, rgba(0,200,180,0.04) 0%, transparent 70%);
+      background-color: #000;
       color: #d0f5f0;
       font-family: 'DM Sans', sans-serif;
       font-size: 15px;
@@ -22,16 +18,6 @@
       min-height: 100vh;
       position: relative;
       overflow-x: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-      opacity: 1;
     }
 
     body > * { position: relative; z-index: 1; }
@@ -1345,99 +1331,196 @@
     })();
 
     /* ────────────────────────────────────────
-       CURSOR SPARKLES
+       CURSOR LIGHTSABER
     ──────────────────────────────────────── */
     (function() {
-      // 4-pointed star SVG path — the same shape as in the poster
-      var STAR_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><polygon points="20,0 23,17 40,20 23,23 20,40 17,23 0,20 17,17" fill="{COLOR}"/></svg>';
+      // Add animations to document
+      var style = document.createElement('style');
+      style.textContent = `
+        @keyframes lsIgnite {
+          0% { transform: scaleY(0); }
+          100% { transform: scaleY(1); }
+        }
+        @keyframes lsPulse {
+          0%, 100% { box-shadow: 0 0 6px #39ff14, 0 0 12px #39ff14, 0 0 18px #39ff14, 0 0 30px #39ff14; }
+          50% { box-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14, 0 0 35px #39ff14, 0 0 50px #39ff14; background-color: #f4fff4; }
+        }
+        .ls-blade {
+          transform-origin: bottom center;
+          animation: lsIgnite 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards, lsPulse 2s ease-in-out infinite 0.4s;
+        }
+      `;
+      document.head.appendChild(style);
 
-      // Colour palette: alternate between gold/yellow, orange, blue
-      var COLORS = ['#F5C518', '#E8642A', '#F0D060', '#2B7FD4', '#F5A623'];
+      // Create the lightsaber container
+      var ls = document.createElement('div');
+      ls.setAttribute('aria-hidden', 'true');
+      ls.style.cssText = [
+        'position:fixed',
+        'pointer-events:none',
+        'z-index:9999',
+        'transform-origin:50% 100%',
+        'width:10px',
+        'height:150px',
+        'display:flex',
+        'flex-direction:column',
+        'align-items:center',
+        'top:-999px',
+        'left:-999px',
+        'margin-top:-150px',
+        'margin-left:-5px',
+        'will-change:transform,left,top',
+        'opacity:0', // Hide initially until first move
+        'transition:opacity 0.2s'
+      ].join(';');
 
-      var pool = [];   // reuse DOM nodes
+      // Blade (white core, green glow)
+      var blade = document.createElement('div');
+      blade.className = 'ls-blade';
+      blade.style.cssText = [
+        'flex-grow:1',
+        'width:6px',
+        'background-color:#ffffff',
+        'border-radius:4px 4px 0 0',
+        'margin-bottom:-2px' // overlap hilt slightly
+      ].join(';');
+
+      // Hilt (metallic handle)
+      var hilt = document.createElement('div');
+      hilt.style.cssText = [
+        'width:10px',
+        'height:35px',
+        'background:linear-gradient(to right, #555, #ddd, #555)',
+        'border-radius:2px 2px 4px 4px',
+        'border-bottom:3px solid #222',
+        'border-top:3px solid #222',
+        'box-shadow:inset 0 0 3px rgba(0,0,0,0.5)'
+      ].join(';');
+
+      ls.appendChild(blade);
+      ls.appendChild(hilt);
+      document.body.appendChild(ls);
+
       var lastX = -999, lastY = -999;
-      var SPAWN_DIST = 12;  // px moved before spawning a new sparkle
-
-      function getNode() {
-        for (var i = 0; i < pool.length; i++) {
-          if (!pool[i]._active) return pool[i];
-        }
-        var el = document.createElement('div');
-        el.setAttribute('aria-hidden', 'true');
-        el.style.cssText = [
-          'position:fixed',
-          'pointer-events:none',
-          'z-index:9999',
-          'transform-origin:center center',
-          'will-change:transform,opacity'
-        ].join(';');
-        document.body.appendChild(el);
-        pool.push(el);
-        return el;
-      }
-
-      function spawnSparkle(x, y) {
-        var el = getNode();
-        el._active = true;
-
-        // Random properties
-        var size    = 14 + Math.random() * 22;        // 14–36 px
-        var color   = COLORS[Math.floor(Math.random() * COLORS.length)];
-        var angle   = Math.random() * 360;            // initial rotation
-        var dAngle  = (Math.random() - 0.5) * 180;   // spin during fade
-        var dx      = (Math.random() - 0.5) * 40;    // drift x
-        var dy      = -20 - Math.random() * 40;       // always drift up
-        var dur     = 600 + Math.random() * 500;      // 600–1100 ms
-
-        var svgData = 'data:image/svg+xml;base64,' +
-          btoa(STAR_SVG.replace('{COLOR}', color));
-
-        el.style.width  = size + 'px';
-        el.style.height = size + 'px';
-        el.style.backgroundImage  = 'url("' + svgData + '")';
-        el.style.backgroundSize   = 'contain';
-        el.style.backgroundRepeat = 'no-repeat';
-        el.style.left    = (x - size / 2) + 'px';
-        el.style.top     = (y - size / 2) + 'px';
-        el.style.opacity = '1';
-        el.style.transform = 'rotate(' + angle + 'deg) scale(1)';
-        el.style.transition = 'none';
-
-        var start = null;
-        function step(ts) {
-          if (!start) start = ts;
-          var p = Math.min((ts - start) / dur, 1);   // 0 → 1
-          var eased = 1 - Math.pow(p, 1.5);           // fast-fade
-
-          el.style.opacity   = eased;
-          el.style.transform = 'rotate(' + (angle + dAngle * p) + 'deg) scale(' + (1 - p * 0.4) + ')';
-          el.style.left = (x - size / 2 + dx * p) + 'px';
-          el.style.top  = (y - size / 2 + dy * p) + 'px';
-
-          if (p < 1) {
-            requestAnimationFrame(step);
-          } else {
-            el.style.opacity = '0';
-            el._active = false;
-          }
-        }
-        requestAnimationFrame(step);
-      }
+      var currentAngle = 0;
+      var targetAngle = 0;
+      var isIgnited = false;
 
       document.addEventListener('mousemove', function(e) {
         var x = e.clientX, y = e.clientY;
-        var d = Math.hypot(x - lastX, y - lastY);
-        if (d < SPAWN_DIST) return;
-        lastX = x; lastY = y;
-
-        // Spawn 1–2 sparkles per movement chunk
-        var count = Math.random() < 0.35 ? 2 : 1;
-        for (var i = 0; i < count; i++) {
-          // Slight jitter around cursor
-          var jx = x + (Math.random() - 0.5) * 16;
-          var jy = y + (Math.random() - 0.5) * 16;
-          spawnSparkle(jx, jy);
+        ls.style.left = x + 'px';
+        ls.style.top = y + 'px';
+        
+        if (!isIgnited) {
+          ls.style.opacity = '1';
+          isIgnited = true;
         }
+
+        if (lastX !== -999 && lastY !== -999) {
+          var dx = x - lastX;
+          // Tilt lightsaber based on horizontal movement speed
+          targetAngle = dx * 2.5;
+          if (targetAngle > 75) targetAngle = 75;
+          if (targetAngle < -75) targetAngle = -75;
+        }
+        lastX = x; lastY = y;
+      });
+
+      function animate() {
+        // Smoothly approach target angle
+        currentAngle += (targetAngle - currentAngle) * 0.15;
+        // Slowly return to upright position (0) if mouse stops
+        targetAngle *= 0.85; 
+        
+        ls.style.transform = 'rotate(' + currentAngle + 'deg)';
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+
+    /* ────────────────────────────────────────
+       STAR WARS HYPERSPACE BACKGROUND
+    ──────────────────────────────────────── */
+    (function() {
+      var canvas = document.createElement('canvas');
+      canvas.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none; background-color:#000;';
+      document.body.insertBefore(canvas, document.body.firstChild);
+      
+      var ctx = canvas.getContext('2d');
+      var numStars = 800;
+      var stars = [];
+      var speed = 2; // Default cruising speed
+      var targetSpeed = 2;
+      
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function initStars() {
+        stars = [];
+        for (var i = 0; i < numStars; i++) {
+          stars.push({
+            x: Math.random() * canvas.width - canvas.width / 2,
+            y: Math.random() * canvas.height - canvas.height / 2,
+            z: Math.random() * canvas.width,
+            pz: Math.random() * canvas.width
+          });
+        }
+      }
+      initStars();
+
+      function animateStars() {
+        // Smoothly interpolate speed
+        speed += (targetSpeed - speed) * 0.1;
+        
+        // Trail effect
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        var cx = canvas.width / 2;
+        var cy = canvas.height / 2;
+        
+        for (var i = 0; i < stars.length; i++) {
+          var star = stars[i];
+          star.pz = star.z;
+          star.z -= speed;
+          
+          if (star.z < 1) {
+            star.z = canvas.width;
+            star.pz = canvas.width;
+            star.x = Math.random() * canvas.width - canvas.width / 2;
+            star.y = Math.random() * canvas.height - canvas.height / 2;
+          }
+          
+          var sx = (star.x / star.z) * canvas.width + cx;
+          var sy = (star.y / star.z) * canvas.width + cy;
+          var px = (star.x / star.pz) * canvas.width + cx;
+          var py = (star.y / star.pz) * canvas.width + cy;
+          
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(sx, sy);
+          
+          var size = (1 - star.z / canvas.width) * 3;
+          ctx.lineWidth = size;
+          ctx.strokeStyle = '#fff';
+          ctx.stroke();
+        }
+        requestAnimationFrame(animateStars);
+      }
+      animateStars();
+      
+      // Hyperspace jump on mouse movement
+      var hyperspaceTimeout;
+      document.addEventListener('mousemove', function() {
+        targetSpeed = 15;
+        clearTimeout(hyperspaceTimeout);
+        hyperspaceTimeout = setTimeout(function() {
+          targetSpeed = 2;
+        }, 150);
       });
     })();
 
