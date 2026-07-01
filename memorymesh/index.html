@@ -252,6 +252,42 @@
     @keyframes fdB{0%,100%{transform:translate(0,0)}33%{transform:translate(-16px,26px)}66%{transform:translate(24px,8px)}}
     @keyframes fdC{0%,100%{transform:translate(0,0)}50%{transform:translate(-22px,-18px)}}
 
+    /* ── DECO IMAGES ── */
+    .deco-img {
+      position: absolute;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.9;
+      box-shadow: 6px 6px 12px #0a141a, -6px -6px 12px #102026, 0 0 0 1px rgba(0, 230, 210, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      object-fit: cover;
+    }
+    .deco-img-1 {
+      width: 180px; height: 240px;
+      border-radius: 20px;
+      top: 15%; right: 15%;
+      animation: decoFloat1 8s ease-in-out infinite alternate;
+      transform: rotate(8deg);
+    }
+    .deco-img-2 {
+      width: 160px; height: 220px;
+      border-radius: 24px;
+      top: 65%; left: 8%;
+      animation: decoFloat2 10s ease-in-out infinite alternate;
+      transform: rotate(-12deg);
+    }
+    @keyframes decoFloat1 {
+      from { transform: translateY(0) rotate(8deg); }
+      to { transform: translateY(-20px) rotate(12deg); }
+    }
+    @keyframes decoFloat2 {
+      from { transform: translateY(0) rotate(-12deg); }
+      to { transform: translateY(20px) rotate(-8deg); }
+    }
+    @media (max-width: 1024px) {
+      .deco-img { display: none; }
+    }
+
     /* ── BUTTONS ── */
     .neo-btn {
       display: inline-flex;
@@ -625,6 +661,9 @@
     <div class="float-dot fd6" aria-hidden="true"></div>
     <div class="float-dot fd7" aria-hidden="true"></div>
     <div class="float-dot fd8" aria-hidden="true"></div>
+
+    <img src="img_1.png" class="deco-img deco-img-1" alt="Y2K Aespa Inspired Deco" aria-hidden="true">
+    <img src="img_2.png" class="deco-img deco-img-2" alt="NASA Space Deco" aria-hidden="true">
 
     <div class="hero-layout">
       <!-- LEFT: text content -->
