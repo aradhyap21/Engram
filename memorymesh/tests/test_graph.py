@@ -31,10 +31,6 @@ def _make_memory_mock():
 
 _MEMORY_MOCK = _make_memory_mock()
 
-# Inject the mock BEFORE importing anything from graph so that
-# when top_paths() later executes `import memory`
-# it gets the mock from sys.modules instead of running memory.py's
-# module-level Supabase connection code.
 if "memory" not in sys.modules:
     sys.modules["memory"] = _MEMORY_MOCK
 
@@ -97,7 +93,7 @@ from graph import apply_decay, build_adjacency, dijkstra, top_paths  # noqa: E40
 
 class TestApplyDecay:
     def test_decay_at_t0_equals_original_weight(self):
-        """Req 5.2: t=0 → decayed_weight == original_weight."""
+        """Req 5.2: t=0 -> decayed_weight == original_weight."""
         node = _node("n1", strength=1.0)
         edge = _edge("e1", "n1", "n2", weight=2.5, days_ago=0.0)
         result = apply_decay([edge], [node])
@@ -105,9 +101,9 @@ class TestApplyDecay:
         assert pytest.approx(result[0]["decayed_weight"], rel=1e-6) == 2.5
 
     def test_decay_at_half_life(self):
-        """Req 5.3: t = S*ln(2) → decayed_weight ≈ original_weight / 2."""
+        """Req 5.3: t = S*ln(2) -> decayed_weight ~ original_weight / 2."""
         S = 3.0
-        t = S * math.log(2)  # half-life
+        t = S * math.log(2)
         node = _node("n1", strength=S)
         edge = _edge("e1", "n1", "n2", weight=4.0, days_ago=t)
         result = apply_decay([edge], [node])
@@ -121,12 +117,7 @@ class TestApplyDecay:
         assert result[0]["decayed_weight"] < 1.0
 
     def test_strength_clamped_to_minimum(self):
-        """Req 5.5: strength=0 is clamped to 0.001; no division-by-zero.
-
-        We use days_ago=0 so the exponential evaluates to 1.0 regardless of
-        the clamped strength — the important guarantee is that no
-        ZeroDivisionError or NaN is raised and the result is finite and > 0.
-        """
+        """Req 5.5: strength=0 clamped to 0.001; no division-by-zero."""
         node = _node("n1", strength=0.0)
         edge = _edge("e1", "n1", "n2", weight=2.0, days_ago=0.0)
         result = apply_decay([edge], [node])
@@ -198,15 +189,12 @@ class TestBuildAdjacency:
 
 class TestDijkstra:
     def _simple_graph(self):
-        """
-        a --(0.5)--> b --(0.3)--> c
-        """
+        """a --(0.5)--> b --(0.3)--> c"""
         nodes = [_node("a"), _node("b"), _node("c")]
         edges_raw = [
             _edge("e1", "a", "b", weight=1.0, days_ago=0.0),
             _edge("e2", "b", "c", weight=1.0, days_ago=0.0),
         ]
-        # Inject explicit decayed_weight values
         decayed = [
             {**edges_raw[0], "decayed_weight": 0.5},
             {**edges_raw[1], "decayed_weight": 0.3},
@@ -239,12 +227,7 @@ class TestDijkstra:
         assert "orphan" not in result
 
     def test_multi_source_picks_minimum(self):
-        """
-        Req 4.4: multi-source Dijkstra initialises all sources at cost=0.
-
-        Graph: s1 --(10)--> c, s2 --(1)--> c
-        Both s1 and s2 are sources; c must be reached via s2 at cost 1.
-        """
+        """Req 4.4: multi-source Dijkstra picks minimum cost."""
         nodes = [_node("s1"), _node("s2"), _node("c")]
         decayed = [
             {"id": "e1", "from_id": "s1", "to_id": "c", "decayed_weight": 10.0},
@@ -257,7 +240,7 @@ class TestDijkstra:
         assert path[-1] == "c"
 
     def test_always_terminates_on_positive_weights(self):
-        """Req 4.5: algorithm terminates (implicitly tested by running it)."""
+        """Req 4.5: algorithm terminates on positive weights."""
         import random
         rng = random.Random(42)
         node_ids = [str(i) for i in range(20)]
@@ -284,14 +267,14 @@ class TestTopPaths:
     """
     Tests for the top_paths orchestration function.
 
-    memorymesh.memory is mocked via sys.modules at module load time so
-    no real Supabase connection is attempted.
-    """
+    The module-level _MEMORY_MOCK in sys.modules["memory"] provides a
+    safe no-op mock so the simpler tests (that don't inspect side-effect
+    calls) still pass without touching Supabase.
 
-    def setup_method(self):
-        """Reset mock call counts before each test."""
-        _MEMORY_MOCK.update_node_strength.reset_mock()
-        _MEMORY_MOCK.update_edge_weight.reset_mock()
+    The two side-effect tests (strength increment + edge weight persist)
+    swap in their own fresh mock via patch.dict so call_args_list is
+    pristine and reliable.
+    """
 
     def _make_graph(self):
         """
@@ -308,6 +291,10 @@ class TestTopPaths:
             _edge("e2", "n2", "n3", weight=1.0, days_ago=0.0, relationship="enables"),
         ]
         return nodes, edges
+
+    # ------------------------------------------------------------------
+    # tests that do NOT inspect mock calls -- module-level mock is fine
+    # ------------------------------------------------------------------
 
     def test_returns_paths_for_matching_entity(self):
         nodes, edges = self._make_graph()
@@ -380,19 +367,33 @@ class TestTopPaths:
         for path_dict in result:
             assert len(path_dict["path"]) > 1
 
+    def test_returns_empty_list_when_query_entities_empty(self):
+        nodes, edges = self._make_graph()
+        result = top_paths(nodes, edges, [])
+        assert result == []
+
+    # ------------------------------------------------------------------
+    # tests that inspect mock call_args_list -- fresh mock per test
+    # ------------------------------------------------------------------
+
     def test_strength_increment_called_for_source_nodes(self):
         """Req 2.5: update_node_strength must be called for matched source nodes."""
         nodes, edges = self._make_graph()
-        top_paths(nodes, edges, ["gravity"])
 
-        # n1 is "gravity" — its strength should be updated
+        mock_mem = MagicMock()
+        mock_mem.update_node_strength = MagicMock(return_value=None)
+        mock_mem.update_edge_weight = MagicMock(return_value=None)
+
+        with patch.dict(sys.modules, {"memory": mock_mem}):
+            top_paths(nodes, edges, ["gravity"])
+
         called_ids = [
             call.args[0]
-            for call in _MEMORY_MOCK.update_node_strength.call_args_list
+            for call in mock_mem.update_node_strength.call_args_list
         ]
         assert "n1" in called_ids
 
-        for call in _MEMORY_MOCK.update_node_strength.call_args_list:
+        for call in mock_mem.update_node_strength.call_args_list:
             node_id, new_strength, new_access_count = call.args
             if node_id == "n1":
                 assert pytest.approx(new_strength, rel=1e-9) == 1.1
@@ -401,15 +402,17 @@ class TestTopPaths:
     def test_update_edge_weight_called_for_traversed_edges(self):
         """Req 2.6: update_edge_weight must be called for edges in paths."""
         nodes, edges = self._make_graph()
-        result = top_paths(nodes, edges, ["gravity"])
+
+        mock_mem = MagicMock()
+        mock_mem.update_node_strength = MagicMock(return_value=None)
+        mock_mem.update_edge_weight = MagicMock(return_value=None)
+
+        with patch.dict(sys.modules, {"memory": mock_mem}):
+            result = top_paths(nodes, edges, ["gravity"])
+
         if result:
             called_ids = [
                 call.args[0]
-                for call in _MEMORY_MOCK.update_edge_weight.call_args_list
+                for call in mock_mem.update_edge_weight.call_args_list
             ]
             assert len(called_ids) > 0
-
-    def test_returns_empty_list_when_query_entities_empty(self):
-        nodes, edges = self._make_graph()
-        result = top_paths(nodes, edges, [])
-        assert result == []
