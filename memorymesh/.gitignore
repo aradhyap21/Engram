@@ -1,9 +1,23 @@
+# Secrets & Environment Variables
 .env
+.env.local
+.env.production
+.env.staging
+.env.development
+# .env.example is NOT ignored — it's a safe template
+
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
 *.egg-info/
 dist/
 build/
 .venv/
 venv/
+
+# Database
+*.sqlite
+*.sqlite3
+*.db

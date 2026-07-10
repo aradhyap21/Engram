@@ -4,8 +4,11 @@
 
 # --- Secrets & Environment Variables ---
 .env
-.env.*
-!.env.example        # allow the example template to be committed
+.env.local
+.env.production
+.env.staging
+.env.development
+# .env.example is intentionally NOT ignored — commit it as a template
 
 # --- Python ---
 __pycache__/
