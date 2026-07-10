@@ -1,0 +1,62 @@
+# ============================================================
+# Root-level .gitignore for Engram monorepo
+# ============================================================
+
+# --- Secrets & Environment Variables ---
+.env
+.env.*
+!.env.example        # allow the example template to be committed
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+MANIFEST
+
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# --- Testing & Coverage ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# --- IDEs & Editors ---
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Database files ---
+*.sqlite
+*.sqlite3
+*.db
+
+# --- Misc ---
+.kiro/
+memorymesh.egg-info/
