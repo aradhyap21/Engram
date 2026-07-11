@@ -84,7 +84,7 @@ def _edge(
 # Import graph functions AFTER sys.modules patching
 # ===========================================================================
 
-from graph import apply_decay, build_adjacency, dijkstra, top_paths  # noqa: E402
+from ..graph import apply_decay, build_adjacency, dijkstra, top_paths  # noqa: E402
 
 
 # ===========================================================================
