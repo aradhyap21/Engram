@@ -1,4 +1,4 @@
-# MemoryMesh
+# Engram
 
 AI-powered memory engine that stores knowledge as a causal graph and retrieves it using Ebbinghaus forgetting-curve decay.
 
