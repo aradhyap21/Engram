@@ -1,10 +1,10 @@
-# MemoryMesh
+# Engram
 
 AI-powered memory engine that stores knowledge as a causal graph and retrieves it using Ebbinghaus forgetting-curve decay.
 
 ## Overview
 
-MemoryMesh transforms plain-text input into a structured knowledge graph. It uses an LLM to extract entities and relationships, persists them in PostgreSQL (via Supabase), and retrieves connected information through Dijkstra pathfinding with exponential decay weighting.
+Engram transforms plain-text input into a structured knowledge graph. It uses an LLM to extract entities and relationships, persists them in PostgreSQL (via Supabase), and retrieves connected information through Dijkstra pathfinding with exponential decay weighting.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ Browser (index.html)
 
 ```bash
 # Clone the repository
-git clone https://github.com/memorymesh/memorymesh.git
+git clone https://github.com/Engram/Engram.git
 cd memorymesh
 
 # Create virtual environment
