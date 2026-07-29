@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 import ai
 import memory
 import graph
+import upload
 
 # ---------------------------------------------------------------------------
 # Task 6.1 — Bootstrap: env loading and validation
