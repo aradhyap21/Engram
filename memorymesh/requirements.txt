@@ -7,3 +7,5 @@ hypothesis
 pytest
 pytest-asyncio
 httpx
+pymupdf
+python-docx
