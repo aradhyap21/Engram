@@ -254,7 +254,10 @@ def top_paths(
     source_ids: list[str] = [
         n["id"]
         for n in nodes
-        if n["content"].lower() in query_lower
+        if any(
+            q in n["content"].lower() or n["content"].lower() in q
+            for q in query_lower
+        )
     ]
 
     if not source_ids:
