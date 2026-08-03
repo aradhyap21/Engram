@@ -68,6 +68,59 @@ class MemoryRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Internal helpers for store_memory
+# ---------------------------------------------------------------------------
+
+
+def _upsert_entities(entities: list[str]) -> list[dict]:
+    """
+    Upsert each entity string as a node and return the list of node dicts.
+
+    Args:
+        entities: List of entity name strings from the LLM extraction.
+
+    Returns:
+        List of node dicts as returned by ``memory.upsert_node``.
+    """
+    stored: list[dict] = []
+    for entity in entities:
+        node = memory.upsert_node(entity, "entity")
+        stored.append(node)
+    return stored
+
+
+def _insert_relationships(
+    relationships: list[dict],
+    content_to_id: dict[str, str],
+) -> int:
+    """
+    Insert edges for each relationship dict and return the count of stored edges.
+
+    Self-loops are silently skipped. Missing node UUIDs are also skipped.
+
+    Args:
+        relationships:  List of relationship dicts with keys ``from``, ``to``, ``type``.
+        content_to_id:  Mapping from entity content string → node UUID.
+
+    Returns:
+        Number of edges successfully inserted.
+    """
+    edges_stored = 0
+    for rel in relationships:
+        from_id = content_to_id.get(rel.get("from", ""))
+        to_id = content_to_id.get(rel.get("to", ""))
+        if from_id is None or to_id is None:
+            continue
+        try:
+            memory.insert_edge(from_id, to_id, rel.get("type", "related"))
+            edges_stored += 1
+        except ValueError:
+            # Self-loop — skip silently (Req 6.4)
+            continue
+    return edges_stored
+
+
+# ---------------------------------------------------------------------------
 # Task 6.1 — Health check
 # ---------------------------------------------------------------------------
 
@@ -91,7 +144,6 @@ def store_memory(request: MemoryRequest):
 
     Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 7.3
     """
-    # Validate non-empty text (Req 1.1)
     if not request.text or not request.text.strip():
         return JSONResponse(
             status_code=400,
@@ -99,69 +151,21 @@ def store_memory(request: MemoryRequest):
         )
 
     try:
-        # Step 1 — Extract entities and relationships via LLM (Req 1.1)
         extraction = ai.extract_entities(request.text)
-        entities = extraction.get("entities", [])
-        relationships = extraction.get("relationships", [])
-
-        # Step 2 — Upsert each entity as a node (Req 1.2)
-        stored_nodes: list[dict] = []
-        for entity in entities:
-            node = memory.upsert_node(entity, "entity")
-            stored_nodes.append(node)
-
-        # Step 3 — Build content → UUID map for edge resolution
-        content_to_id: dict[str, str] = {
-            node["content"]: node["id"] for node in stored_nodes
-        }
-
-        # Step 4 — Insert edges for each relationship (Req 1.3)
-        edges_stored = 0
-        for rel in relationships:
-            from_content = rel.get("from", "")
-            to_content = rel.get("to", "")
-            rel_type = rel.get("type", "related")
-
-            from_id = content_to_id.get(from_content)
-            to_id = content_to_id.get(to_content)
-
-            # Skip if either UUID is not found (node not in extraction result)
-            if from_id is None or to_id is None:
-                continue
-
-            try:
-                memory.insert_edge(from_id, to_id, rel_type)
-                edges_stored += 1
-            except ValueError:
-                # Self-loop detected — skip silently (Req 6.4)
-                continue
-
-        # Step 5 — Build response (Req 1.4)
-        node_ids = [node["id"] for node in stored_nodes]
+        stored_nodes = _upsert_entities(extraction.get("entities", []))
+        content_to_id: dict[str, str] = {n["content"]: n["id"] for n in stored_nodes}
+        edges_stored = _insert_relationships(extraction.get("relationships", []), content_to_id)
         return {
             "nodes_stored": len(stored_nodes),
             "edges_stored": edges_stored,
-            "node_ids": node_ids,
+            "node_ids": [n["id"] for n in stored_nodes],
         }
-
     except ValueError as exc:
-        # LLM parse failures or invalid input (Req 1.5)
-        return JSONResponse(
-            status_code=422,
-            content={"error": f"Entity extraction failed: {exc}"},
-        )
+        return JSONResponse(status_code=422, content={"error": f"Entity extraction failed: {exc}"})
     except RuntimeError as exc:
-        # Supabase / network failures (Req 1.5)
-        return JSONResponse(
-            status_code=503,
-            content={"error": f"Database error: {exc}"},
-        )
+        return JSONResponse(status_code=503, content={"error": f"Database error: {exc}"})
     except Exception as exc:
-        # Catch-all — never let raw exceptions bubble (Req 1.5, 7.3)
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Unexpected error: {exc}"},
-        )
+        return JSONResponse(status_code=500, content={"error": f"Unexpected error: {exc}"})
 
 
 # ---------------------------------------------------------------------------
