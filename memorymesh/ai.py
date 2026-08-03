@@ -39,6 +39,75 @@ Return JSON only with no additional text, explanation, or markdown:
 Text: {text}"""
 
 
+def _call_llm(prompt: str, temperature: float = 0.1, max_tokens: int = 1024) -> str:
+    """
+    Send *prompt* to the NVIDIA NIM LLM and return the raw response string.
+
+    Args:
+        prompt:      The full prompt string to send.
+        temperature: Sampling temperature (default 0.1 for deterministic output).
+        max_tokens:  Maximum tokens in the response.
+
+    Returns:
+        The raw text content from the first completion choice.
+    """
+    response = client.chat.completions.create(
+        model="meta/llama-3.1-70b-instruct",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+    return response.choices[0].message.content or ""
+
+
+def _parse_llm_json(content: str) -> dict:
+    """
+    Parse a JSON dict from *content*, with a regex fallback for wrapped JSON.
+
+    Tries a direct ``json.loads`` first; if that fails, searches for the
+    first ``{...}`` block using a regex and retries.
+
+    Args:
+        content: Raw string from the LLM that should contain a JSON object.
+
+    Returns:
+        Parsed dict.
+
+    Raises:
+        ValueError: If neither parse strategy succeeds.
+    """
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    match = re.search(r'\{.*\}', content, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+
+    raise ValueError("LLM returned non-JSON response")
+
+
+def _validate_extraction(result: dict) -> None:
+    """
+    Assert that *result* contains the required ``entities`` and
+    ``relationships`` list keys.
+
+    Args:
+        result: Parsed dict from the LLM response.
+
+    Raises:
+        ValueError: If a required key is absent or has the wrong type.
+    """
+    if "entities" not in result or not isinstance(result["entities"], list):
+        raise ValueError('LLM response is missing required key "entities" (list)')
+    if "relationships" not in result or not isinstance(result["relationships"], list):
+        raise ValueError('LLM response is missing required key "relationships" (list)')
+
+
 def extract_entities(text: str) -> dict:
     """
     Call the NVIDIA NIM API to extract entities and relationships from *text*.
@@ -56,44 +125,9 @@ def extract_entities(text: str) -> dict:
                     the expected keys are absent.
     """
     prompt = _EXTRACTION_PROMPT.format(text=text)
-
-    response = client.chat.completions.create(
-        model="meta/llama-3.1-70b-instruct",
-        messages=[
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.1,
-        max_tokens=1024,
-    )
-
-    content = response.choices[0].message.content or ""
-
-    # Primary parse attempt
-    result = None
-    try:
-        result = json.loads(content)
-    except json.JSONDecodeError:
-        # Regex fallback: grab the first {...} block in the response
-        match = re.search(r'\{.*\}', content, re.DOTALL)
-        if match:
-            try:
-                result = json.loads(match.group())
-            except json.JSONDecodeError:
-                pass
-
-    if result is None:
-        raise ValueError("LLM returned non-JSON response")
-
-    # Validate required keys
-    if "entities" not in result or not isinstance(result["entities"], list):
-        raise ValueError(
-            'LLM response is missing required key "entities" (list)'
-        )
-    if "relationships" not in result or not isinstance(result["relationships"], list):
-        raise ValueError(
-            'LLM response is missing required key "relationships" (list)'
-        )
-
+    content = _call_llm(prompt, temperature=0.1, max_tokens=1024)
+    result = _parse_llm_json(content)
+    _validate_extraction(result)
     return result
 
 
@@ -131,14 +165,4 @@ def synthesize_insight(paths: list, query: str) -> str:
         serialised = "(no memory paths were found for this query)"
 
     prompt = _SYNTHESIS_PROMPT.format(query=query, paths=serialised)
-
-    response = client.chat.completions.create(
-        model="meta/llama-3.1-70b-instruct",
-        messages=[
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.7,
-        max_tokens=512,
-    )
-
-    return (response.choices[0].message.content or "").strip()
+    return _call_llm(prompt, temperature=0.7, max_tokens=512).strip()
