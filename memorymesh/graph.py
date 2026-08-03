@@ -164,6 +164,111 @@ def dijkstra(adjacency: dict, source_ids: list[str]) -> dict:
     return paths
 
 
+# ---------------------------------------------------------------------------
+# top_paths helpers — extracted to keep each function at a single concern
+# ---------------------------------------------------------------------------
+
+
+def _match_source_nodes(nodes: list[dict], query_entities: list[str]) -> list[str]:
+    """
+    Return a list of node UUIDs whose ``content`` matches any query entity.
+
+    Matching is case-insensitive and bidirectional (query substring of content
+    OR content substring of query).
+
+    Args:
+        nodes:           Full node list from the graph.
+        query_entities:  Entity strings from the user's query.
+
+    Returns:
+        List of matching node UUIDs (may be empty).
+    """
+    query_lower = {q.lower() for q in query_entities}
+    return [
+        n["id"]
+        for n in nodes
+        if any(
+            q in n["content"].lower() or n["content"].lower() in q
+            for q in query_lower
+        )
+    ]
+
+
+def _persist_source_strengths(
+    source_ids: list[str],
+    node_lookup: dict[str, dict],
+    memory_module: object,
+) -> None:
+    """
+    Increment strength and access_count for every Dijkstra source node.
+
+    Failures are swallowed so that retrieval always returns results even when
+    the persistence layer is temporarily unavailable.
+
+    Args:
+        source_ids:    UUIDs of the nodes used as Dijkstra sources.
+        node_lookup:   Mapping from node UUID → node dict.
+        memory_module: The ``memory`` module (passed in to avoid circular import).
+    """
+    for node_id in source_ids:
+        node = node_lookup.get(node_id)
+        if node is None:
+            continue
+        new_strength = node["strength"] + 0.1
+        new_access_count = node["access_count"] + 1
+        try:
+            memory_module.update_node_strength(node_id, new_strength, new_access_count)
+        except Exception:
+            # Non-fatal: retrieval still returns results
+            pass
+
+
+def _build_path_dict(
+    path_list: list[str],
+    total_cost: float,
+    node_lookup: dict[str, dict],
+    edge_lookup: dict[tuple, dict],
+    memory_module: object,
+) -> dict | None:
+    """
+    Construct a single path dict and persist decayed edge weights.
+
+    Returns ``None`` if any node or edge in the path cannot be resolved,
+    so the caller can safely skip incomplete paths.
+
+    Args:
+        path_list:     Ordered list of node UUIDs from source to destination.
+        total_cost:    Dijkstra total cost for this path.
+        node_lookup:   UUID → node dict mapping.
+        edge_lookup:   (from_id, to_id) → decayed edge dict mapping.
+        memory_module: The ``memory`` module for persisting decayed weights.
+
+    Returns:
+        A path dict with keys ``path``, ``edges``, ``total_cost``, or ``None``.
+    """
+    path_nodes: list[dict] = []
+    for nid in path_list:
+        n = node_lookup.get(nid)
+        if n is None:
+            return None
+        path_nodes.append({"id": n["id"], "content": n["content"], "entity_type": n["entity_type"]})
+
+    path_edges: list[dict] = []
+    for i in range(len(path_list) - 1):
+        from_id = path_list[i]
+        to_id = path_list[i + 1]
+        edge = edge_lookup.get((from_id, to_id))
+        if edge is None:
+            return None
+        path_edges.append({"relationship": edge["relationship"], "decayed_weight": edge["decayed_weight"]})
+        try:
+            memory_module.update_edge_weight(edge["id"], edge["decayed_weight"])
+        except Exception:
+            pass
+
+    return {"path": path_nodes, "edges": path_edges, "total_cost": total_cost}
+
+
 def top_paths(
     nodes: list[dict],
     edges: list[dict],
@@ -179,173 +284,49 @@ def top_paths(
         3. Match query_entities (strings) to node UUIDs via case-insensitive
            comparison against each node's ``content`` field.
         4. Run multi-source Dijkstra from the matched source node IDs.
-        5. Persist side-effects:
-           - Increment ``strength += 0.1`` and ``access_count += 1`` for
-             every source node touched by Dijkstra, then write to Supabase.
-           - Persist the decayed weight for every edge traversed in the
-             returned paths.
+        5. Persist side-effects via helper functions.
         6. Return the top-k path dicts sorted ascending by ``total_cost``.
 
     Args:
-        nodes:           List of node dicts from Supabase.  Each dict must
-                         have at least the keys: ``id``, ``content``,
-                         ``entity_type``, ``strength``, ``access_count``.
-        edges:           List of edge dicts from Supabase.  Each dict must
-                         have at least the keys: ``id``, ``from_id``,
-                         ``to_id``, ``weight``, ``created_at``,
-                         ``relationship``.
-        query_entities:  List of entity name strings extracted from the
-                         user's query (e.g. ``["gravity", "Isaac Newton"]``).
+        nodes:           List of node dicts from Supabase.
+        edges:           List of edge dicts from Supabase.
+        query_entities:  List of entity name strings from the user's query.
         k:               Maximum number of paths to return (default 5).
 
     Returns:
         A list of at most *k* path dicts sorted ascending by ``total_cost``.
-        Each dict has the shape::
-
-            {
-                "path": [
-                    {"id": str, "content": str, "entity_type": str},
-                    ...
-                ],
-                "edges": [
-                    {"relationship": str, "decayed_weight": float},
-                    ...
-                ],
-                "total_cost": float,
-            }
-
-        Returns ``[]`` when:
-        - ``nodes`` or ``edges`` is empty,
-        - no node's content matches any of the ``query_entities``, or
-        - Dijkstra finds no multi-hop paths.
-
-    Side effects:
-        - Calls ``memory.update_node_strength`` for each source node.
-        - Calls ``memory.update_edge_weight`` for each edge in the paths.
+        Returns ``[]`` when nodes/edges are empty, no entities match, or
+        Dijkstra finds no multi-hop paths.
 
     Satisfies Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 4.1–4.5
     """
     # Import memory here to avoid any potential circular-import issues.
-    # memory.py only imports supabase and dotenv — it does NOT import graph.py.
     import memory  # noqa: PLC0415
 
-    # ------------------------------------------------------------------
-    # Guard: empty graph
-    # ------------------------------------------------------------------
     if not nodes or not edges:
         return []
 
-    # ------------------------------------------------------------------
-    # Step 1 — Apply Ebbinghaus decay
-    # ------------------------------------------------------------------
     decayed_edges = apply_decay(edges, nodes)
-
-    # ------------------------------------------------------------------
-    # Step 2 — Build adjacency list
-    # ------------------------------------------------------------------
     adjacency = build_adjacency(nodes, decayed_edges)
 
-    # ------------------------------------------------------------------
-    # Step 3 — Match query entities → source node UUIDs
-    # ------------------------------------------------------------------
-    query_lower = {q.lower() for q in query_entities}
-    node_lookup: dict[str, dict] = {n["id"]: n for n in nodes}
-
-    source_ids: list[str] = [
-        n["id"]
-        for n in nodes
-        if any(
-            q in n["content"].lower() or n["content"].lower() in q
-            for q in query_lower
-        )
-    ]
-
+    source_ids = _match_source_nodes(nodes, query_entities)
     if not source_ids:
         return []
 
-    # ------------------------------------------------------------------
-    # Step 4 — Run multi-source Dijkstra
-    # ------------------------------------------------------------------
+    node_lookup: dict[str, dict] = {n["id"]: n for n in nodes}
+    _persist_source_strengths(source_ids, node_lookup, memory)
+
     dijkstra_result = dijkstra(adjacency, source_ids)
 
-    # ------------------------------------------------------------------
-    # Step 5a — Persist strength increments for source nodes
-    # ------------------------------------------------------------------
-    for node_id in source_ids:
-        node = node_lookup.get(node_id)
-        if node is None:
-            continue
-        new_strength = node["strength"] + 0.1
-        new_access_count = node["access_count"] + 1
-        try:
-            memory.update_node_strength(node_id, new_strength, new_access_count)
-        except Exception:
-            # Non-fatal: log and continue so retrieval still returns results
-            pass
+    edge_lookup: dict[tuple, dict] = {(e["from_id"], e["to_id"]): e for e in decayed_edges}
 
-    # ------------------------------------------------------------------
-    # Step 5b — Build an O(1) edge lookup for path reconstruction
-    # (keyed by (from_id, to_id))
-    # ------------------------------------------------------------------
-    edge_lookup: dict[tuple, dict] = {
-        (e["from_id"], e["to_id"]): e for e in decayed_edges
-    }
-
-    # ------------------------------------------------------------------
-    # Step 6 — Reconstruct and rank paths; persist decayed edge weights
-    # ------------------------------------------------------------------
     path_dicts: list[dict] = []
-
     for node_id, (total_cost, path_list) in dijkstra_result.items():
-        # Only multi-hop paths (exclude source-only single-node entries)
         if len(path_list) <= 1:
             continue
+        path_dict = _build_path_dict(path_list, total_cost, node_lookup, edge_lookup, memory)
+        if path_dict is not None:
+            path_dicts.append(path_dict)
 
-        # Build human-readable node sequence
-        path_nodes: list[dict] = []
-        for nid in path_list:
-            n = node_lookup.get(nid)
-            if n is None:
-                break
-            path_nodes.append(
-                {
-                    "id": n["id"],
-                    "content": n["content"],
-                    "entity_type": n["entity_type"],
-                }
-            )
-        else:
-            # Build edge sequence and persist decayed weights
-            path_edges: list[dict] = []
-            for i in range(len(path_list) - 1):
-                from_id = path_list[i]
-                to_id = path_list[i + 1]
-                edge = edge_lookup.get((from_id, to_id))
-                if edge is None:
-                    break
-                path_edges.append(
-                    {
-                        "relationship": edge["relationship"],
-                        "decayed_weight": edge["decayed_weight"],
-                    }
-                )
-                # Persist the decayed weight back to Supabase
-                try:
-                    memory.update_edge_weight(edge["id"], edge["decayed_weight"])
-                except Exception:
-                    pass
-            else:
-                path_dicts.append(
-                    {
-                        "path": path_nodes,
-                        "edges": path_edges,
-                        "total_cost": total_cost,
-                    }
-                )
-
-    if not path_dicts:
-        return []
-
-    # Sort ascending by total_cost and return top-k
     path_dicts.sort(key=lambda p: p["total_cost"])
     return path_dicts[:k]
