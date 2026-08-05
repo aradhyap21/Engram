@@ -1,5 +1,5 @@
 """
-MemoryMesh — Supabase data layer.
+Engram — Supabase data layer.
 
 All CRUD interactions with the nodes and edges tables via the
 supabase-py client. No raw SQL strings or other DB drivers are used.

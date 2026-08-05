@@ -6,14 +6,14 @@
 
 | Field                 | Details                                               |
 | --------------------- | ----------------------------------------------------- |
-| **Project Title**     | MemoryMesh — AI-powered Memory Engine                 |
+| **Project Title**     | Engram — AI-powered Memory Engine                 |
 | **Source**            | Own project                                           |
 | **GitHub Link**       | *(local workspace)*                                   |
 | **Primary Languages** | Python 3.10+                                          |
 
 ### Project Description
 
-MemoryMesh is an AI-powered memory engine that stores knowledge as a causal graph using Ebbinghaus forgetting-curve decay. It provides a FastAPI-based REST API for storing memories, retrieving memory paths using a custom Python implementation of Dijkstra's algorithm, and synthesizing insights via NVIDIA NIM (LLM).
+Engram is an AI-powered memory engine that stores knowledge as a causal graph using Ebbinghaus forgetting-curve decay. It provides a FastAPI-based REST API for storing memories, retrieving memory paths using a custom Python implementation of Dijkstra's algorithm, and synthesizing insights via NVIDIA NIM (LLM).
 
 The system consists of several core modules:
 - **`graph.py`** — Pure-Python implementation of Ebbinghaus decay, graph adjacency building, Dijkstra shortest-path, and top-path orchestration.

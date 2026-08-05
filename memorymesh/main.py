@@ -1,5 +1,5 @@
 """
-MemoryMesh — FastAPI application entry point.
+Engram — FastAPI application entry point.
 
 Mounts CORS middleware, loads environment variables, and registers
 all HTTP route handlers for memory storage, retrieval, and synthesis.
@@ -49,7 +49,7 @@ if not _NVIDIA_API_KEY:
 # App creation and CORS
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="MemoryMesh", version="1.0.0")
+app = FastAPI(title="Engram", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

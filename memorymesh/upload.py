@@ -1,5 +1,5 @@
 """
-MemoryMesh - Document upload and text extraction functionality.
+Engram - Document upload and text extraction functionality.
 Handles PDF and Word document uploads, extracts text content, and formats
 text for further processing by the main application.
 """

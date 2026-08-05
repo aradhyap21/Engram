@@ -1,5 +1,5 @@
 """
-MemoryMesh — NVIDIA NIM AI client.
+Engram — NVIDIA NIM AI client.
 
 Wraps the OpenAI-compatible NVIDIA NIM SDK to provide entity extraction
 and LLM insight synthesis as pure, stateless functions.

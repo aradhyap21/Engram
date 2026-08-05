@@ -1,5 +1,5 @@
 """
-MemoryMesh — Dijkstra shortest-path and Ebbinghaus decay engine.
+Engram — Dijkstra shortest-path and Ebbinghaus decay engine.
 
 Pure-Python implementation using only heapq, math, and datetime
 from the standard library. No third-party graph libraries used.
