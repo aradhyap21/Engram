@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Engram — The Memory Mesh</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #efeadd;
+      --text-main: #111111;
+      --accent-blue: #2B7FD4;
+      --border-thick: 4px solid #111111;
+      --border-thin: 1px solid #111111;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Space Mono', monospace;
+      line-height: 1.5;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Grainy Noise Filter */
+    .noise-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.45;
+      mix-blend-mode: multiply;
+      background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Header Section */
+    header {
+      border-bottom: var(--border-thick);
+      padding-bottom: 2rem;
+      margin-bottom: 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .massive-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(4rem, 12vw, 10rem);
+      line-height: 0.8;
+      letter-spacing: -2px;
+      text-transform: uppercase;
+    }
+    
+    .massive-title span {
+      display: inline-block;
+    }
+
+    .header-meta {
+      font-size: 0.85rem;
+      text-align: right;
+      text-transform: uppercase;
+      font-weight: 700;
+      max-width: 250px;
+      padding-bottom: 1rem;
+    }
+
+    /* Grid Layout */
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .grid-layout {
+        grid-template-columns: 1fr;
+      }
+      .massive-title {
+        font-size: clamp(3rem, 15vw, 6rem);
+      }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      .header-meta {
+        text-align: left;
+      }
+    }
+
+    /* Content Blocks */
+    .content-block {
+      border-top: var(--border-thin);
+      padding-top: 1rem;
+      margin-bottom: 3rem;
+    }
+
+    .content-title {
+      font-family: 'Inter', sans-serif;
+      font-weight: 900;
+      font-size: 1.5rem;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      letter-spacing: -0.5px;
+    }
+
+    .content-text {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Duotone Graphic Element */
+    .graphic-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      background: var(--text-main);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: var(--border-thick);
+    }
+    
+    .graphic-container::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="4" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.3"/%3E%3C/svg%3E');
+      mix-blend-mode: overlay;
+    }
+
+    .sphere {
+      width: 120%;
+      height: 120%;
+      background: radial-gradient(circle at 30% 30%, var(--accent-blue) 0%, #000 70%);
+      border-radius: 50%;
+      filter: contrast(2.5) grayscale(0.2);
+    }
+
+    /* Data Visualization Elements */
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--text-main);
+      border: var(--border-thin);
+      margin-top: 2rem;
+    }
+    .data-cell {
+      background: var(--bg-color);
+      padding: 0.5rem;
+      font-size: 0.7rem;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .line-chart {
+      margin-top: 2rem;
+      width: 100%;
+      height: 100px;
+      border-bottom: var(--border-thin);
+      border-left: var(--border-thin);
+      position: relative;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 19px,
+        rgba(17, 17, 17, 0.1) 20px
+      );
+    }
+    .line-path {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+    }
+
+    /* CTA Button */
+    .cta-container {
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: var(--border-thick);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .retro-btn {
+      display: inline-block;
+      background: var(--text-main);
+      color: var(--bg-color);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.5rem;
+      padding: 1rem 3rem;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .retro-btn::after {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 100%;
+      height: 100%;
+      border: 2px solid var(--text-main);
+      z-index: -1;
+      transition: all 0.2s ease;
+    }
+
+    .retro-btn:hover {
+      transform: translate(4px, 4px);
+      background: var(--accent-blue);
+      color: #fff;
+    }
+    
+    .retro-btn:hover::after {
+      transform: translate(-4px, -4px);
+      border-color: var(--accent-blue);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      border: var(--border-thin);
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .badge.blue {
+      background: var(--accent-blue);
+      color: #fff;
+      border-color: var(--accent-blue);
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="noise-overlay"></div>
+
+  <div class="container">
+    <header>
+      <div class="massive-title">
+        <span>ENGRAM</span>
+      </div>
+      <div class="header-meta">
+        <p>PROJECT: MEMORY MESH</p>
+        <p>STATUS: V1.0 BETA</p>
+        <p>SYSTEM: GRAPH-BASED AI</p>
+      </div>
+    </header>
+
+    <div class="grid-layout">
+      <!-- Left Column: Content -->
+      <div>
+        <div class="content-block">
+          <div class="badge">Problem Statement</div>
+          <h2 class="content-title">The Keyword Crisis</h2>
+          <p class="content-text">
+            Traditional memory systems rely on rigid keywords and hierarchical folders. They force you to categorize information before you even know how it connects. When you try to retrieve an idea, you have to remember exactly how you tagged it, not the context surrounding it.
+          </p>
+          <p class="content-text">
+            This results in fragmented knowledge. Ideas sit in isolated silos. We lose the serendipitous connections that spark true insight. Memory becomes a static storage drive instead of a dynamic web.
+          </p>
+        </div>
+
+        <div class="content-block">
+          <div class="badge blue">Our Solution</div>
+          <h2 class="content-title">Relational Graph Memory</h2>
+          <p class="content-text">
+            Engram is built on a fundamentally different architecture: the Memory Mesh. By utilizing a knowledge graph combined with advanced AI vector embeddings, Engram doesn't just store text—it stores relationships.
+          </p>
+          <p class="content-text">
+            When you input a thought, the AI automatically analyzes the semantic meaning, extracts entities, and creates edges connecting it to your existing knowledge base. You retrieve memories not by guessing a keyword, but by exploring the neighborhood of concepts.
+          </p>
+          <div class="data-grid">
+            <div class="data-cell">NODES</div>
+            <div class="data-cell">EDGES</div>
+            <div class="data-cell">VECTORS</div>
+            <div class="data-cell">LLM</div>
+            <div class="data-cell">DYNAMIC</div>
+            <div class="data-cell">SEMANTIC</div>
+            <div class="data-cell">NETWORKED</div>
+            <div class="data-cell">ACTIVE</div>
+          </div>
+        </div>
+
+        <div class="content-block">
+          <div class="badge">Architecture</div>
+          <h2 class="content-title">Beyond Standard RAG</h2>
+          <p class="content-text">
+            Traditional Retrieval-Augmented Generation (RAG) systems rely almost entirely on simple vector similarity. This often retrieves fragmented, isolated chunks of data without understanding the broader context or the sequence of events.
+          </p>
+          <p class="content-text">
+            Engram transcends this limitation. By treating information as a networked graph, our system performs multi-hop traversals. It doesn't just find text that looks similar; it finds concepts that are logically connected, providing LLMs with comprehensive context and significantly reducing hallucinations.
+          </p>
+        </div>
+
+        <div class="content-block">
+          <div class="badge">Scale</div>
+          <h2 class="content-title">A Knowledge OS for Enterprise</h2>
+          <p class="content-text">
+            Companies generate massive amounts of unstructured data across disparate platforms—Slack, Notion, Google Drive, and internal wikis. Engram acts as an intelligent operating system layer that sits on top of this scattered information.
+          </p>
+          <p class="content-text">
+            It continuously ingests, structures, and links your company's data into a unified, queryable nervous system. Teams no longer search for documents; they query an active, organizational brain that surfaces insights faster than any traditional search engine.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Column: Visuals -->
+      <div>
+        <div class="graphic-container">
+          <div class="sphere"></div>
+        </div>
+
+        <div class="line-chart">
+          <svg class="line-path" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <polyline points="0,80 20,60 40,75 60,30 80,45 100,10" fill="none" stroke="#111111" stroke-width="2"/>
+            <circle cx="20" cy="60" r="3" fill="#111" />
+            <circle cx="40" cy="75" r="3" fill="#111" />
+            <circle cx="60" cy="30" r="3" fill="#2B7FD4" />
+            <circle cx="80" cy="45" r="3" fill="#111" />
+          </svg>
+        </div>
+        <p style="font-size: 0.7rem; font-weight: 700; margin-top: 0.5rem; text-transform: uppercase;">FIG 1: Semantic Connectivity Index</p>
+      </div>
+    </div>
+
+    <div class="cta-container">
+      <div>
+        <p style="font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Ready to build your mesh?</p>
+      </div>
+      <a href="index.html" class="retro-btn">TRY IT OUT</a>
+    </div>
+  </div>
+
+</body>
+</html>
