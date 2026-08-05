@@ -14,16 +14,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
-import ai
-import memory
-import graph
-import upload
 
 # ---------------------------------------------------------------------------
 # Task 6.1 — Bootstrap: env loading and validation
 # ---------------------------------------------------------------------------
 
 load_dotenv()
+
+from . import ai
+from . import memory
+from . import graph
+from . import upload
 
 _SUPABASE_URL = os.getenv("SUPABASE_URL")
 _SUPABASE_KEY = os.getenv("SUPABASE_KEY")
