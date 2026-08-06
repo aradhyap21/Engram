@@ -267,6 +267,50 @@
       padding: 30px; margin-bottom: 20px;
     }
 
+    /* ── FILE UPLOAD ── */
+    .file-upload-wrapper {
+      position: relative;
+      width: 100%;
+      min-height: 120px;
+      border: 2px dashed var(--text-main);
+      background: rgba(17, 17, 17, 0.02);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .file-upload-wrapper:hover {
+      background: rgba(43, 127, 212, 0.05);
+      border-color: var(--accent-blue);
+    }
+    .neo-file-input {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 10;
+    }
+    .file-upload-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+    .file-upload-text .upload-icon {
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+    .file-types {
+      font-size: 0.65rem;
+      letter-spacing: 1px;
+      opacity: 0.5;
+    }
+
     /* ── INPUTS ── */
     .neo-textarea, .neo-input {
       width: 100%;
@@ -490,6 +534,21 @@
           <div id="store-result-area" role="region" aria-live="polite" aria-label="Store result">
             <div class="divider"></div>
             <div id="store-stats" class="store-result"></div>
+          </div>
+        </div>
+
+        <div class="neo-card">
+          <div class="file-upload-wrapper">
+            <input type="file" id="memory-file" class="neo-file-input" accept=".txt,.pdf,.ppt,.pptx,.doc,.docx" />
+            <div class="file-upload-text">
+              <span class="upload-icon">↑</span>
+              <span>SELECT FILE TO STORE</span>
+              <span class="file-types">SUPPORTED: PDF, PPT, TXT, DOC</span>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button id="store-file-btn" class="neo-btn blue" onclick="storeFileMemory()">▶ Store Document</button>
           </div>
         </div>
 
