@@ -312,6 +312,61 @@
       overflow: visible;
     }
 
+    /* OS Workflow */
+    .os-workflow {
+      margin-top: 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .workflow-node {
+      width: 100%;
+      text-align: center;
+      padding: 1.2rem;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      position: relative;
+    }
+    .workflow-node.source {
+      border-bottom: var(--border-thick);
+    }
+    .workflow-icons {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .workflow-node.process {
+      border: 2px dashed var(--text-main);
+      background: rgba(17, 17, 17, 0.02);
+    }
+    .workflow-node.core {
+      background: var(--text-main);
+      color: var(--bg-color);
+      box-shadow: 6px 6px 0 var(--accent-blue);
+      border: 2px solid var(--text-main);
+    }
+    .workflow-node.output {
+      border-top: var(--border-thick);
+    }
+    .workflow-label {
+      display: block;
+      font-size: 0.65rem;
+      letter-spacing: 1.5px;
+      margin-bottom: 0.5rem;
+      opacity: 0.7;
+    }
+    .workflow-arrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+    }
+
     /* Funk Box */
     .funk-box {
       margin-top: 3rem;
@@ -535,6 +590,34 @@
           </div>
         </div>
         <p style="font-size: 0.7rem; font-weight: 700; margin-top: 0.5rem; text-transform: uppercase;">FIG 2: Vector Search vs Knowledge Graph</p>
+
+        <!-- OS Workflow Structure -->
+        <div class="os-workflow">
+          <div class="workflow-node source">
+            <span>UNSTRUCTURED DATA</span>
+            <div class="workflow-icons">
+              <span class="badge">SLACK</span>
+              <span class="badge">NOTION</span>
+              <span class="badge">DRIVE</span>
+            </div>
+          </div>
+          <div class="workflow-arrow">↓</div>
+          <div class="workflow-node process">
+            <span class="workflow-label">PIPELINE</span>
+            <span>VECTOR & ENTITY EXTRACTION</span>
+          </div>
+          <div class="workflow-arrow">↓</div>
+          <div class="workflow-node core">
+            <span class="workflow-label">KNOWLEDGE OS</span>
+            <span>ENGRAM GRAPH ENGINE</span>
+          </div>
+          <div class="workflow-arrow">↓</div>
+          <div class="workflow-node output">
+            <span class="workflow-label">INTERFACE</span>
+            <span>ACTIVE ORGANIZATIONAL BRAIN</span>
+          </div>
+        </div>
+        <p style="font-size: 0.7rem; font-weight: 700; margin-top: 0.5rem; text-transform: uppercase;">FIG 3: OS Information Flow</p>
       </div>
     </div>
 
