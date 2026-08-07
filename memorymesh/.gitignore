@@ -21,3 +21,8 @@ venv/
 *.sqlite
 *.sqlite3
 *.db
+
+# One-off probe / scratch scripts
+check_sim.py
+test_nim_tools.py
+test_nim_embed.py
