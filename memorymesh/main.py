@@ -25,6 +25,8 @@ from . import ai
 from . import memory
 from . import graph
 from . import upload
+from .entity_resolution_v2 import resolve_entity, EntityCandidate
+import json
 
 _SUPABASE_URL = os.getenv("SUPABASE_URL")
 _SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -73,20 +75,88 @@ class MemoryRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _upsert_entities(entities: list[str]) -> list[dict]:
+def _upsert_entities(entities: list[str], context: str) -> list[dict]:
     """
-    Upsert each entity string as a node and return the list of node dicts.
+    Resolve and upsert each entity string as a node and return the list of node dicts.
 
     Args:
         entities: List of entity name strings from the LLM extraction.
+        context: The original text context for resolution.
 
     Returns:
-        List of node dicts as returned by ``memory.upsert_node``.
+        List of node dicts as returned by ``memory.upsert_node`` or ``memory.insert_resolved_node``.
     """
     stored: list[dict] = []
     for entity in entities:
-        node = memory.upsert_node(entity, "entity")
-        stored.append(node)
+        # 1. Generate embedding
+        try:
+            emb = ai.extract_embedding(entity)
+        except Exception as e:
+            # Fallback to standard upsert if embedding fails
+            node = memory.upsert_node(entity, "entity")
+            stored.append(node)
+            continue
+
+        # 2. Find candidates
+        raw_cands = memory.get_similar_candidates(emb, threshold=0.60)
+        candidates = []
+        for c in raw_cands:
+            aliases_raw = c.get("aliases")
+            if isinstance(aliases_raw, str):
+                try:
+                    aliases_list = json.loads(aliases_raw)
+                except:
+                    aliases_list = []
+            else:
+                aliases_list = aliases_raw or []
+                
+            candidates.append(
+                EntityCandidate(
+                    id=c["id"],
+                    canonical_name=c.get("canonical_name") or c["content"],
+                    type=c.get("entity_type", "entity"),
+                    aliases=aliases_list,
+                    sample_context=c.get("source_mention") or "",
+                )
+            )
+            
+        # 3. Resolve
+        res = resolve_entity(
+            mention_name=entity,
+            mention_type="entity",
+            context=context,
+            candidates=candidates,
+            model="meta/llama-3.1-70b-instruct"
+        )
+        
+        # 4. Branch on decision
+        if res.decision == "MERGE":
+            memory.update_node_aliases(res.merge_target_id, res.aliases_to_add)
+            existing_node = next((c for c in raw_cands if c["id"] == res.merge_target_id), None)
+            if existing_node:
+                existing_node["content"] = entity
+                stored.append(existing_node)
+        else:
+            new_node = memory.insert_resolved_node(
+                content=entity,
+                entity_type="entity",
+                embedding=emb,
+                canonical_name=res.canonical_name,
+                aliases=res.aliases_to_add,
+                pending_review=(res.decision == "NEEDS_REVIEW"),
+                source_mention=res.provenance.source_mention,
+                model_used=res.provenance.model_used,
+                decided_at=res.provenance.decided_at,
+                reasoning=res.reasoning
+            )
+            stored.append(new_node)
+            
+            if res.decision == "RELATED_SUBENTITY" and res.related_subentity_of:
+                try:
+                    memory.insert_edge(new_node["id"], res.related_subentity_of, "subentity_of")
+                except Exception:
+                    pass
+
     return stored
 
 
@@ -153,7 +223,7 @@ def store_memory(request: MemoryRequest):
 
     try:
         extraction = ai.extract_entities(request.text)
-        stored_nodes = _upsert_entities(extraction.get("entities", []))
+        stored_nodes = _upsert_entities(extraction.get("entities", []), request.text)
         content_to_id: dict[str, str] = {n["content"]: n["id"] for n in stored_nodes}
         edges_stored = _insert_relationships(extraction.get("relationships", []), content_to_id)
         return {
