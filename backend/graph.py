@@ -301,7 +301,7 @@ def top_paths(
     Satisfies Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 4.1–4.5
     """
     # Import memory here to avoid any potential circular-import issues.
-    import memory  # noqa: PLC0415
+    from . import memory  # noqa: PLC0415
 
     if not nodes or not edges:
         return []

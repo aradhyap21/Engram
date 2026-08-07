@@ -32,7 +32,7 @@ with patch.dict(
         "dotenv": MagicMock(),
     },
 ):
-    from ..ai import extract_entities, synthesize_insight  # noqa: E402
+    from backend.ai import extract_entities, synthesize_insight  # noqa: E402
 
 # Configure the mock client to be returned by OpenAI()
 from openai import OpenAI as _OpenAI

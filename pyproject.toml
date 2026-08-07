@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "memorymesh"
+name = "engram"
 version = "1.0.0"
 description = "AI-powered memory engine that stores knowledge as a causal graph using Ebbinghaus forgetting-curve decay"
 readme = "README.md"
@@ -43,11 +43,11 @@ dev = [
 ]
 
 [project.scripts]
-memorymesh = "memorymesh.main:app"
+engram = "backend.main:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["memorymesh*"]
+include = ["backend*"]
 
 [tool.ruff]
 line-length = 100
@@ -64,5 +64,5 @@ warn_unused_configs = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["memorymesh/tests"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]

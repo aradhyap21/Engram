@@ -31,8 +31,8 @@ def _make_memory_mock():
 
 _MEMORY_MOCK = _make_memory_mock()
 
-if "memory" not in sys.modules:
-    sys.modules["memory"] = _MEMORY_MOCK
+if "backend.memory" not in sys.modules:
+    sys.modules["backend.memory"] = _MEMORY_MOCK
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ def _edge(
 # Import graph functions AFTER sys.modules patching
 # ===========================================================================
 
-from ..graph import apply_decay, build_adjacency, dijkstra, top_paths  # noqa: E402
+from backend.graph import apply_decay, build_adjacency, dijkstra, top_paths  # noqa: E402
 
 
 # ===========================================================================
@@ -384,7 +384,7 @@ class TestTopPaths:
         mock_mem.update_node_strength = MagicMock(return_value=None)
         mock_mem.update_edge_weight = MagicMock(return_value=None)
 
-        with patch.dict(sys.modules, {"memory": mock_mem}):
+        with patch.dict(sys.modules, {"backend.memory": mock_mem}):
             top_paths(nodes, edges, ["gravity"])
 
         called_ids = [
@@ -407,7 +407,7 @@ class TestTopPaths:
         mock_mem.update_node_strength = MagicMock(return_value=None)
         mock_mem.update_edge_weight = MagicMock(return_value=None)
 
-        with patch.dict(sys.modules, {"memory": mock_mem}):
+        with patch.dict(sys.modules, {"backend.memory": mock_mem}):
             result = top_paths(nodes, edges, ["gravity"])
 
         if result:

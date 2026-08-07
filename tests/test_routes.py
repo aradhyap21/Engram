@@ -23,10 +23,13 @@ from fastapi.testclient import TestClient
 mock_memory = MagicMock()
 mock_ai = MagicMock()
 mock_graph = MagicMock()
+mock_entity_resolution = MagicMock()
 
-sys.modules["memory"] = mock_memory
-sys.modules["ai"] = mock_ai
-sys.modules["graph"] = mock_graph
+sys.modules["backend.memory"] = mock_memory
+sys.modules["backend.ai"] = mock_ai
+sys.modules["backend.graph"] = mock_graph
+sys.modules["backend.upload"] = MagicMock()
+sys.modules["backend.entity_resolution_v2"] = mock_entity_resolution
 
 # Load main.py with env vars set so startup validation passes
 with patch.dict("os.environ", {
@@ -34,7 +37,7 @@ with patch.dict("os.environ", {
     "SUPABASE_KEY": "test-key",
     "NVIDIA_API_KEY": "test-nvidia-key",
 }):
-    from main import app  # noqa: E402
+    from backend.main import app  # noqa: E402
 
 client = TestClient(app)
 
@@ -64,14 +67,18 @@ class TestMemoryPostEndpoint:
 
     def setup_method(self):
         """Reset mocks before each test — also clear child mock attributes."""
-        # Clear any side_effect/return_value on child mocks leftover from
-        # previous tests (reset_mock only resets the parent mock's call list).
         mock_ai.extract_entities.side_effect = None
         mock_ai.extract_entities.return_value = MagicMock()
+        mock_ai.extract_embedding.side_effect = None
+        mock_ai.extract_embedding.return_value = [0.1] * 1024
         mock_ai.synthesize_insight.side_effect = None
         mock_ai.synthesize_insight.return_value = MagicMock()
         mock_memory.upsert_node.side_effect = None
         mock_memory.upsert_node.return_value = MagicMock()
+        mock_memory.insert_resolved_node.side_effect = None
+        mock_memory.insert_resolved_node.return_value = {"id": "uuid-mock", "content": "test"}
+        mock_memory.get_similar_candidates.side_effect = None
+        mock_memory.get_similar_candidates.return_value = []
         mock_memory.insert_edge.side_effect = None
         mock_memory.insert_edge.return_value = MagicMock()
         mock_memory.get_all_nodes.side_effect = None
@@ -80,9 +87,25 @@ class TestMemoryPostEndpoint:
         mock_memory.get_all_edges.return_value = MagicMock()
         mock_graph.top_paths.side_effect = None
         mock_graph.top_paths.return_value = MagicMock()
-        mock_ai.reset_mock()
-        mock_memory.reset_mock()
-        mock_graph.reset_mock()
+        mock_entity_resolution.resolve_entity.return_value = MagicMock(
+            decision="CREATE_NEW",
+            canonical_name="test",
+            aliases_to_add=[],
+            reasoning="test",
+            related_subentity_of=None,
+            provenance=MagicMock(
+                source_mention="test",
+                model_used="test",
+                decided_at="2024-01-01T00:00:00Z",
+            ),
+        )
+        mock_ai.reset_mock(return_value=True, side_effect=True)
+        mock_memory.reset_mock(return_value=True, side_effect=True)
+        mock_graph.reset_mock(return_value=True, side_effect=True)
+        # Re-apply defaults after reset
+        mock_ai.extract_embedding.return_value = [0.1] * 1024
+        mock_memory.insert_resolved_node.return_value = {"id": "uuid-mock", "content": "test"}
+        mock_memory.get_similar_candidates.return_value = []
 
     def test_store_memory_success(self):
         """Successful memory storage returns counts and node IDs."""
@@ -90,7 +113,8 @@ class TestMemoryPostEndpoint:
             "entities": ["Einstein", "Relativity"],
             "relationships": [{"from": "Einstein", "to": "Relativity", "type": "developed"}],
         }
-        mock_memory.upsert_node.side_effect = [
+        # Resolution pipeline calls insert_resolved_node (not upsert_node) for CREATE_NEW
+        mock_memory.insert_resolved_node.side_effect = [
             {"id": "uuid-1", "content": "Einstein"},
             {"id": "uuid-2", "content": "Relativity"},
         ]

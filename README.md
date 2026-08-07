@@ -9,18 +9,21 @@ Engram transforms plain-text input into a structured knowledge graph. It uses an
 ## Architecture
 
 ```
-Browser (index.html)
+Browser (frontend/)
     └── HTTP API calls to FastAPI
-        └── main.py (FastAPI routes, CORS, error handling)
-            ├── ai.py (NVIDIA NIM API client)
-            ├── graph.py (Dijkstra + Ebbinghaus decay)
-            └── memory.py (Supabase CRUD operations)
+        └── backend/main.py (FastAPI routes, CORS, error handling)
+            ├── ai.py          (NVIDIA NIM — extraction, embeddings)
+            ├── graph.py       (Dijkstra + Ebbinghaus decay)
+            ├── memory.py      (Supabase / SQLite CRUD)
+            ├── entity_resolution_v2.py  (multi-candidate entity resolution)
+            └── upload.py      (PDF/PPT/TXT/DOC parsing)
 ```
 
 ## Features
 
 - **Entity Extraction**: LLM-powered extraction of entities and relationships from text
-- **Graph Storage**: Nodes and edges stored in PostgreSQL with UUID primary keys
+- **Entity Resolution**: Multi-candidate resolution with MERGE / CREATE_NEW / RELATED_SUBENTITY / NEEDS_REVIEW outcomes — no silent duplicates
+- **Graph Storage**: Nodes and edges stored in PostgreSQL (Supabase) with SQLite local fallback
 - **Decay-Aware Retrieval**: Ebbinghaus exponential decay (`R = e^(-t/S)`) reduces edge weights over time
 - **Shortest Path**: Dijkstra algorithm finds the most relevant causal paths
 - **Insight Synthesis**: LLM generates non-obvious insights from retrieved paths
@@ -29,8 +32,8 @@ Browser (index.html)
 
 ```bash
 # Clone the repository
-git clone https://github.com/Engram/Engram.git
-cd memorymesh
+git clone https://github.com/aradhyap21/Engram.git
+cd Engram
 
 # Create virtual environment
 python -m venv .venv
@@ -87,8 +90,8 @@ create index on public.edges (to_id);
 ## Usage
 
 ```bash
-# Start the server
-uvicorn memorymesh.main:app --reload --host 0.0.0.0 --port 8000
+# Start the server (from the project root)
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### API Endpoints
@@ -122,32 +125,48 @@ curl http://localhost:8000/memory/synthesize?query=urbanization
 pytest
 
 # Run with coverage
-pytest --cov=memorymesh
+pytest --cov=backend
 
-# Run specific test file
-pytest tests/test_graph.py
+# Run integration test (requires NVIDIA_API_KEY)
+python -m tests.test_resolution
 ```
 
 ## Project Structure
 
 ```
-memorymesh/
-├── memorymesh/
+Engram/
+├── backend/                    # Python FastAPI package
 │   ├── __init__.py
-│   ├── main.py          # FastAPI application
-│   ├── ai.py            # NVIDIA NIM client
-│   ├── graph.py         # Dijkstra + decay engine
-│   ├── memory.py        # Supabase data layer
-│   ├── index.html       # Frontend
-│   └── tests/
-│       ├── __init__.py
-│       ├── test_graph.py
-│       ├── test_ai.py
-│       ├── test_memory.py
-│       └── test_routes.py
-├── schema.sql           # Database schema
-├── pyproject.toml       # Project configuration
-└── README.md            # This file
+│   ├── main.py                 # FastAPI application & routes
+│   ├── ai.py                   # NVIDIA NIM (extraction + embeddings)
+│   ├── graph.py                # Dijkstra + Ebbinghaus decay engine
+│   ├── memory.py               # Supabase / SQLite data layer
+│   ├── entity_resolution_v2.py # Multi-candidate entity resolution
+│   ├── upload.py               # Document parsing (PDF/PPT/TXT/DOC)
+│   ├── schema.sql              # Database schema
+│   ├── .env.example            # Environment variable template
+│   └── .gitignore
+│
+├── frontend/                   # Static UI
+│   ├── index.html
+│   ├── about.html
+│   └── img_*.png
+│
+├── tests/                      # All test files
+│   ├── __init__.py
+│   ├── test_ai.py
+│   ├── test_graph.py
+│   ├── test_memory.py
+│   ├── test_routes.py
+│   └── test_resolution.py      # Entity resolution integration test
+│
+├── docs/
+│   └── context.md              # Developer context & design notes
+│
+├── .env                        # Local secrets (gitignored)
+├── .gitignore
+├── pyproject.toml
+└── README.md
 ```
 
 ## License

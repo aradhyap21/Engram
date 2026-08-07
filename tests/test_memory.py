@@ -23,11 +23,11 @@ _mock_supabase_client = MagicMock()
 
 # If test_graph.py injected a mock into sys.modules["memory"], remove it
 # and reimport the real module.
-if "memory" in sys.modules:
-    _existing = sys.modules["memory"]
+if "backend.memory" in sys.modules:
+    _existing = sys.modules["backend.memory"]
     # If it looks like a mock (no __file__), delete it
     if not hasattr(_existing, "__file__") or _existing.__file__ is None:
-        del sys.modules["memory"]
+        del sys.modules["backend.memory"]
 
 # Do the same for supabase — test_graph might have put a mock there too
 if "supabase" in sys.modules:
@@ -43,7 +43,7 @@ with patch.dict(
     import supabase as _supabase  # ensure it's loaded
 
     with patch.object(_supabase, "create_client", return_value=_mock_supabase_client):
-        import memory  # noqa: E402
+        import backend.memory as memory  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # upsert_node tests

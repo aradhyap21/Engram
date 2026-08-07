@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 # load env manually
 load_dotenv()
 
-from memorymesh.main import store_memory, MemoryRequest
-from memorymesh.memory import DB_FILE, _init_local_db, get_all_nodes, get_all_edges
+from backend.main import store_memory, MemoryRequest
+from backend.memory import DB_FILE, _init_local_db, get_all_nodes, get_all_edges
 
 def main():
     # Setup test by clearing the local db
