@@ -8,6 +8,8 @@ supabase-py client. No raw SQL strings or other DB drivers are used.
 import os
 import sqlite3
 import uuid
+import json
+import math
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -66,6 +68,14 @@ def _init_local_db() -> None:
         id TEXT PRIMARY KEY,
         content TEXT NOT NULL UNIQUE,
         entity_type TEXT,
+        canonical_name TEXT,
+        aliases TEXT DEFAULT '[]',
+        embedding TEXT,
+        pending_review INTEGER DEFAULT 0,
+        source_mention TEXT,
+        model_used TEXT,
+        decided_at TEXT,
+        reasoning TEXT,
         strength REAL DEFAULT 1.0,
         access_count INTEGER DEFAULT 0,
         created_at TEXT
@@ -105,8 +115,8 @@ def _local_upsert_node(content: str, entity_type: str) -> dict:
     node_id = str(uuid.uuid4())
     now_iso = datetime.now(timezone.utc).isoformat()
     cursor.execute(
-        "INSERT INTO nodes (id, content, entity_type, strength, access_count, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (node_id, content, entity_type, 1.0, 0, now_iso),
+        "INSERT INTO nodes (id, content, entity_type, strength, access_count, created_at, aliases) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (node_id, content, entity_type, 1.0, 0, now_iso, "[]"),
     )
     conn.commit()
     cursor.execute("SELECT * FROM nodes WHERE id = ?", (node_id,))
@@ -224,6 +234,7 @@ def upsert_node(content: str, entity_type: str) -> dict:
                     "entity_type": entity_type,
                     "strength": 1.0,
                     "access_count": 0,
+                    "aliases": [],
                 }
             )
             .execute()
@@ -350,4 +361,150 @@ def update_edge_weight(edge_id: str, new_weight: float) -> None:
         raise RuntimeError(
             f"Failed to update weight for edge '{edge_id}': {exc}"
         ) from exc
+
+
+# ---------------------------------------------------------------------------
+# Entity Resolution Support
+# ---------------------------------------------------------------------------
+
+def _cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
+    dot_product = sum(a * b for a, b in zip(vec1, vec2))
+    norm_a = math.sqrt(sum(a * a for a in vec1))
+    norm_b = math.sqrt(sum(b * b for b in vec2))
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot_product / (norm_a * norm_b)
+
+def get_similar_candidates(mention_embedding: list[float], threshold: float = 0.75, k: int = 5) -> list[dict]:
+    """
+    Fetch all nodes and compute cosine similarity against mention_embedding.
+    Returns the top k candidates that exceed the threshold.
+    """
+    nodes = get_all_nodes()
+    candidates = []
+    
+    for node in nodes:
+        emb_str = node.get("embedding")
+        if not emb_str:
+            continue
+            
+        if isinstance(emb_str, str):
+            try:
+                emb = json.loads(emb_str)
+            except:
+                continue
+        else:
+            emb = emb_str
+            
+        if not isinstance(emb, list) or len(emb) != len(mention_embedding):
+            continue
+            
+        sim = _cosine_similarity(mention_embedding, emb)
+        if sim >= threshold:
+            node["_similarity"] = sim
+            candidates.append(node)
+            
+    candidates.sort(key=lambda x: x["_similarity"], reverse=True)
+    return candidates[:k]
+
+def _local_update_node_aliases(node_id: str, new_aliases: list[str]) -> None:
+    _init_local_db()
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT aliases FROM nodes WHERE id = ?", (node_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return
+        
+    current_aliases = []
+    if row[0]:
+        try:
+            current_aliases = json.loads(row[0])
+        except:
+            pass
+            
+    # merge and deduplicate
+    combined = list(set(current_aliases + new_aliases))
+    cursor.execute("UPDATE nodes SET aliases = ? WHERE id = ?", (json.dumps(combined), node_id))
+    conn.commit()
+    conn.close()
+
+def update_node_aliases(node_id: str, new_aliases: list[str]) -> None:
+    try:
+        response = supabase.table("nodes").select("aliases").eq("id", node_id).execute()
+        if not response.data:
+            return
+            
+        current_aliases = response.data[0].get("aliases") or []
+        combined = list(set(current_aliases + new_aliases))
+        supabase.table("nodes").update({"aliases": combined}).eq("id", node_id).execute()
+    except Exception as exc:
+        if _is_network_error(exc):
+            _local_update_node_aliases(node_id, new_aliases)
+            return
+        raise RuntimeError(f"Failed to update aliases for node '{node_id}': {exc}") from exc
+
+def _local_insert_resolved_node(content: str, entity_type: str, kwargs: dict) -> dict:
+    _init_local_db()
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    node_id = str(uuid.uuid4())
+    now_iso = datetime.now(timezone.utc).isoformat()
+    
+    aliases = json.dumps(kwargs.get("aliases", []))
+    embedding = json.dumps(kwargs.get("embedding", [])) if kwargs.get("embedding") else None
+    
+    cursor.execute(
+        '''INSERT INTO nodes (
+            id, content, entity_type, canonical_name, aliases, embedding, 
+            pending_review, source_mention, model_used, decided_at, reasoning,
+            strength, access_count, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        (
+            node_id, content, entity_type, 
+            kwargs.get("canonical_name"), aliases, embedding,
+            1 if kwargs.get("pending_review") else 0,
+            kwargs.get("source_mention"), kwargs.get("model_used"), kwargs.get("decided_at"),
+            kwargs.get("reasoning"),
+            1.0, 0, now_iso
+        )
+    )
+    conn.commit()
+    cursor.execute("SELECT * FROM nodes WHERE id = ?", (node_id,))
+    res = dict(cursor.fetchone())
+    conn.close()
+    return res
+
+def insert_resolved_node(content: str, entity_type: str, **kwargs) -> dict:
+    """
+    Insert a new node with full resolution fields.
+    kwargs can include: embedding, canonical_name, aliases, pending_review, source_mention, model_used, decided_at, reasoning.
+    """
+    try:
+        # For Supabase, pass lists/dicts directly for JSONB
+        insert_data = {
+            "content": content,
+            "entity_type": entity_type,
+            "strength": 1.0,
+            "access_count": 0,
+            "canonical_name": kwargs.get("canonical_name"),
+            "aliases": kwargs.get("aliases", []),
+            "embedding": kwargs.get("embedding"),
+            "pending_review": kwargs.get("pending_review", False),
+            "source_mention": kwargs.get("source_mention"),
+            "model_used": kwargs.get("model_used"),
+            "decided_at": kwargs.get("decided_at"),
+            "reasoning": kwargs.get("reasoning"),
+        }
+        response = supabase.table("nodes").insert(insert_data).execute()
+        if not response.data:
+            raise RuntimeError(f"Insert returned no data.")
+        return response.data[0]
+    except Exception as exc:
+        if _is_network_error(exc):
+            return _local_insert_resolved_node(content, entity_type, kwargs)
+        raise RuntimeError(f"Failed to insert resolved node '{content}': {exc}") from exc
 
