@@ -9,6 +9,13 @@ create table public.nodes (
     id uuid default uuid_generate_v4() primary key,
     content text not null,
     entity_type text,
+    canonical_name text,
+    aliases jsonb default '[]'::jsonb,
+    embedding jsonb,
+    pending_review boolean default false,
+    source_mention text,
+    model_used text,
+    decided_at timestamp with time zone,
     strength float default 1.0,
     access_count int default 0,
     created_at timestamp with time zone default timezone('utc'::text, now())
