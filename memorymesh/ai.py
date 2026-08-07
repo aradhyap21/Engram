@@ -132,6 +132,23 @@ def extract_entities(text: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Embeddings
+# ---------------------------------------------------------------------------
+
+def extract_embedding(text: str) -> list[float]:
+    """
+    Generate an embedding for the given text using NVIDIA NIM's embedding model.
+    """
+    response = client.embeddings.create(
+        input=[text],
+        model="nvidia/nv-embedqa-e5-v5",
+        encoding_format="float",
+        extra_body={"input_type": "query"}
+    )
+    return response.data[0].embedding
+
+
+# ---------------------------------------------------------------------------
 # Insight synthesis
 # ---------------------------------------------------------------------------
 
