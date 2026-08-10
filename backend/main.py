@@ -26,7 +26,25 @@ from . import memory
 from . import graph
 from . import upload
 from .entity_resolution_v2 import resolve_entity, EntityCandidate
+from .conflict_detection import detect_conflicts
 import json
+from datetime import datetime, timezone
+
+RELATION_CLASSIFICATION = {
+    "causes": "cumulative",
+    "developed": "cumulative",
+    "relates": "cumulative",
+    "related": "cumulative",
+    "subentity_of": "cumulative",
+    "lives_in": "exclusive",
+    "current_employer": "exclusive",
+    "marital_status": "exclusive",
+    "job_title": "exclusive",
+    "worked_at": "cumulative",
+    "friend_of": "cumulative",
+    "visited": "cumulative",
+    "knows": "cumulative",
+}
 
 _SUPABASE_URL = os.getenv("SUPABASE_URL")
 _SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -163,6 +181,7 @@ def _upsert_entities(entities: list[str], context: str) -> list[dict]:
 def _insert_relationships(
     relationships: list[dict],
     content_to_id: dict[str, str],
+    context: str,
 ) -> int:
     """
     Insert edges for each relationship dict and return the count of stored edges.
@@ -172,19 +191,68 @@ def _insert_relationships(
     Args:
         relationships:  List of relationship dicts with keys ``from``, ``to``, ``type``.
         content_to_id:  Mapping from entity content string → node UUID.
+        context:        The original context string (fact text).
 
     Returns:
         Number of edges successfully inserted.
     """
     edges_stored = 0
+    now_iso = datetime.now(timezone.utc).isoformat()
     for rel in relationships:
         from_id = content_to_id.get(rel.get("from", ""))
         to_id = content_to_id.get(rel.get("to", ""))
+        rel_type = rel.get("type", "related")
+
         if from_id is None or to_id is None:
             continue
+            
+        classification = RELATION_CLASSIFICATION.get(rel_type, "cumulative")
+
         try:
-            memory.insert_edge(from_id, to_id, rel.get("type", "related"))
-            edges_stored += 1
+            if classification == "exclusive":
+                active_edges = memory.get_active_edges(from_id, rel_type)
+                if active_edges:
+                    result = detect_conflicts(
+                        entity_id=from_id,
+                        relation_type=rel_type,
+                        new_fact_text=context,
+                        ingestion_timestamp=now_iso,
+                        existing_edges=active_edges
+                    )
+
+                    inserted_new = False
+                    for conflict in result.conflicts:
+                        if conflict.action == "INVALIDATE_EXISTING":
+                            memory.update_edge_invalid_at(conflict.existing_edge_id, conflict.invalid_at)
+                            if not inserted_new:
+                                memory.insert_edge(from_id, to_id, rel_type, fact_text=context)
+                                inserted_new = True
+                                edges_stored += 1
+                        elif conflict.action == "INVALIDATE_NEW":
+                            if not inserted_new:
+                                memory.insert_edge(from_id, to_id, rel_type, fact_text=context, invalid_at=conflict.invalid_at)
+                                inserted_new = True
+                                edges_stored += 1
+                        elif conflict.action == "KEEP_BOTH":
+                            if not inserted_new:
+                                memory.insert_edge(from_id, to_id, rel_type, fact_text=context)
+                                inserted_new = True
+                                edges_stored += 1
+                        elif conflict.action == "MERGE_FACTS":
+                            existing_edge = next((e for e in active_edges if e["id"] == conflict.existing_edge_id), None)
+                            if existing_edge:
+                                merged_text = f"{existing_edge.get('fact_text', '')} | {context}"
+                                memory.update_edge_fact_text(conflict.existing_edge_id, merged_text)
+                    
+                    if not result.conflicts and not inserted_new:
+                        memory.insert_edge(from_id, to_id, rel_type, fact_text=context)
+                        edges_stored += 1
+                else:
+                    memory.insert_edge(from_id, to_id, rel_type, fact_text=context)
+                    edges_stored += 1
+            else:
+                memory.insert_edge(from_id, to_id, rel_type, fact_text=context)
+                edges_stored += 1
         except ValueError:
             # Self-loop — skip silently (Req 6.4)
             continue
@@ -225,7 +293,7 @@ def store_memory(request: MemoryRequest):
         extraction = ai.extract_entities(request.text)
         stored_nodes = _upsert_entities(extraction.get("entities", []), request.text)
         content_to_id: dict[str, str] = {n["content"]: n["id"] for n in stored_nodes}
-        edges_stored = _insert_relationships(extraction.get("relationships", []), content_to_id)
+        edges_stored = _insert_relationships(extraction.get("relationships", []), content_to_id, request.text)
         return {
             "nodes_stored": len(stored_nodes),
             "edges_stored": edges_stored,
