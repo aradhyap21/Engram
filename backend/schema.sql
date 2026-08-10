@@ -27,6 +27,9 @@ create table public.edges (
     from_id uuid references public.nodes(id),
     to_id uuid references public.nodes(id),
     relationship text,
+    fact_text text,
+    valid_at timestamp with time zone,
+    invalid_at timestamp with time zone,
     weight float default 1.0,
     created_at timestamp with time zone default timezone('utc'::text, now())
 );

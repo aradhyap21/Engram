@@ -89,6 +89,9 @@ def _init_local_db() -> None:
         from_id TEXT,
         to_id TEXT,
         relationship TEXT,
+        fact_text TEXT,
+        valid_at TEXT,
+        invalid_at TEXT,
         weight REAL DEFAULT 1.0,
         created_at TEXT,
         FOREIGN KEY(from_id) REFERENCES nodes(id),
@@ -152,7 +155,7 @@ def _local_update_node_strength(
 
 
 def _local_insert_edge(
-    from_id: str, to_id: str, relationship: str, weight: float = 1.0
+    from_id: str, to_id: str, relationship: str, weight: float = 1.0, fact_text: str | None = None, valid_at: str | None = None, invalid_at: str | None = None
 ) -> dict:
     if from_id == to_id:
         raise ValueError(
@@ -166,8 +169,8 @@ def _local_insert_edge(
     edge_id = str(uuid.uuid4())
     now_iso = datetime.now(timezone.utc).isoformat()
     cursor.execute(
-        "INSERT INTO edges (id, from_id, to_id, relationship, weight, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (edge_id, from_id, to_id, relationship, weight, now_iso),
+        "INSERT INTO edges (id, from_id, to_id, relationship, weight, created_at, fact_text, valid_at, invalid_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (edge_id, from_id, to_id, relationship, weight, now_iso, fact_text, valid_at, invalid_at),
     )
     conn.commit()
     cursor.execute("SELECT * FROM edges WHERE id = ?", (edge_id,))
@@ -188,6 +191,18 @@ def _local_get_all_edges() -> list[dict]:
     return res
 
 
+def _local_get_active_edges(from_id: str, relationship: str) -> list[dict]:
+    _init_local_db()
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM edges WHERE from_id = ? AND relationship = ? AND invalid_at IS NULL", (from_id, relationship))
+    rows = cursor.fetchall()
+    res = [dict(r) for r in rows]
+    conn.close()
+    return res
+
+
 def _local_update_edge_weight(edge_id: str, new_weight: float) -> None:
     _init_local_db()
     conn = sqlite3.connect(DB_FILE)
@@ -195,6 +210,24 @@ def _local_update_edge_weight(edge_id: str, new_weight: float) -> None:
     cursor.execute(
         "UPDATE edges SET weight = ? WHERE id = ?", (new_weight, edge_id)
     )
+    conn.commit()
+    conn.close()
+
+
+def _local_update_edge_invalid_at(edge_id: str, invalid_at: str) -> None:
+    _init_local_db()
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE edges SET invalid_at = ? WHERE id = ?", (invalid_at, edge_id))
+    conn.commit()
+    conn.close()
+
+
+def _local_update_edge_fact_text(edge_id: str, fact_text: str) -> None:
+    _init_local_db()
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE edges SET fact_text = ? WHERE id = ?", (fact_text, edge_id))
     conn.commit()
     conn.close()
 
@@ -293,7 +326,7 @@ def update_node_strength(
 
 
 def insert_edge(
-    from_id: str, to_id: str, relationship: str, weight: float = 1.0
+    from_id: str, to_id: str, relationship: str, weight: float = 1.0, fact_text: str | None = None, valid_at: str | None = None, invalid_at: str | None = None
 ) -> dict:
     """
     Insert a directed edge between two node UUIDs.
@@ -313,13 +346,16 @@ def insert_edge(
                     "to_id": to_id,
                     "relationship": relationship,
                     "weight": weight,
+                    "fact_text": fact_text,
+                    "valid_at": valid_at,
+                    "invalid_at": invalid_at,
                 }
             )
             .execute()
         )
     except Exception as exc:
         if _is_network_error(exc):
-            return _local_insert_edge(from_id, to_id, relationship, weight)
+            return _local_insert_edge(from_id, to_id, relationship, weight, fact_text, valid_at, invalid_at)
         raise RuntimeError(
             f"Failed to insert edge from '{from_id}' to '{to_id}': {exc}"
         ) from exc
@@ -346,6 +382,27 @@ def get_all_edges() -> list[dict]:
     return response.data or []
 
 
+def get_active_edges(from_id: str, relationship: str) -> list[dict]:
+    """
+    Return edges matching from_id and relationship where invalid_at IS NULL.
+    """
+    try:
+        response = (
+            supabase.table("edges")
+            .select("*")
+            .eq("from_id", from_id)
+            .eq("relationship", relationship)
+            .is_("invalid_at", "null")
+            .execute()
+        )
+    except Exception as exc:
+        if _is_network_error(exc):
+            return _local_get_active_edges(from_id, relationship)
+        raise RuntimeError(f"Failed to fetch active edges: {exc}") from exc
+
+    return response.data or []
+
+
 def update_edge_weight(edge_id: str, new_weight: float) -> None:
     """
     Persist a decayed edge weight back to Supabase.
@@ -361,6 +418,32 @@ def update_edge_weight(edge_id: str, new_weight: float) -> None:
         raise RuntimeError(
             f"Failed to update weight for edge '{edge_id}': {exc}"
         ) from exc
+
+
+def update_edge_invalid_at(edge_id: str, invalid_at: str) -> None:
+    """
+    Set invalid_at on an edge to mark it as contradicted/expired.
+    """
+    try:
+        supabase.table("edges").update({"invalid_at": invalid_at}).eq("id", edge_id).execute()
+    except Exception as exc:
+        if _is_network_error(exc):
+            _local_update_edge_invalid_at(edge_id, invalid_at)
+            return
+        raise RuntimeError(f"Failed to update invalid_at for edge '{edge_id}': {exc}") from exc
+
+
+def update_edge_fact_text(edge_id: str, fact_text: str) -> None:
+    """
+    Update the fact_text of an existing edge.
+    """
+    try:
+        supabase.table("edges").update({"fact_text": fact_text}).eq("id", edge_id).execute()
+    except Exception as exc:
+        if _is_network_error(exc):
+            _local_update_edge_fact_text(edge_id, fact_text)
+            return
+        raise RuntimeError(f"Failed to update fact_text for edge '{edge_id}': {exc}") from exc
 
 
 # ---------------------------------------------------------------------------
