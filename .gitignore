@@ -62,5 +62,14 @@ Thumbs.db
 
 # --- Misc ---
 .kiro/
+.kiro
+.clude/
+.clude
+radon.json
+radon.xml
+radon_report/
+radon_report.txt
+radon_report.md
+radon_reports/
 memorymesh.egg-info/
 engram.egg-info/
