@@ -25,6 +25,7 @@ from . import ai
 from . import memory
 from . import graph
 from . import upload
+from .rlm.routes import router as rlm_router
 from .entity_resolution_v2 import resolve_entity, EntityCandidate
 from .conflict_detection import detect_conflicts
 import json
@@ -78,6 +79,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(rlm_router, prefix="/rlm")
 
 # ---------------------------------------------------------------------------
 # Pydantic request model
