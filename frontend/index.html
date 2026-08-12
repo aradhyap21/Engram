@@ -587,6 +587,7 @@
           <div class="btn-row">
             <button id="retrieve-btn"  class="neo-btn orange"       onclick="retrieveMemory()">◎ Retrieve</button>
             <button id="synthesize-btn" class="neo-btn outline-blue" onclick="synthesizeMemory()">✦ Synthesize</button>
+            <button id="rlm-btn" class="neo-btn outline-blue" onclick="rlmQuery()">⚡ RLM Query</button>
           </div>
         </div>
 
@@ -680,7 +681,7 @@
     }
 
     function disableAll(disabled) {
-      ['store-btn', 'retrieve-btn', 'synthesize-btn'].forEach(function(id) {
+      ['store-btn', 'retrieve-btn', 'synthesize-btn', 'rlm-btn'].forEach(function(id) {
         var btn = document.getElementById(id);
         if (btn) btn.disabled = disabled;
       });
@@ -831,6 +832,52 @@
       .catch(function(err) {
         disableAll(false);
         setLoading('synthesize-btn', false);
+        showError('Network error: ' + err.message);
+      });
+    }
+
+    /* ────────────────────────────────────────
+       RLM QUERY
+    ──────────────────────────────────────── */
+    function rlmQuery() {
+      var query = document.getElementById('query-input').value.trim();
+      var context = document.getElementById('memory-text').value.trim();
+      if (!query) { setStatus('Please enter an RLM query in the search bar.', true); return; }
+
+      setStatus('Running Recursive Language Model…', false);
+      setLoading('rlm-btn', true);
+      disableAll(true);
+
+      fetch(API_BASE + '/rlm/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context: context, query: query })
+      })
+      .then(function(res) {
+        return res.json().then(function(data) {
+          return { ok: res.ok, status: res.status, data: data };
+        });
+      })
+      .then(function(result) {
+        disableAll(false);
+        setLoading('rlm-btn', false);
+        if (!result.ok || (result.data && result.data.error)) {
+          showError((result.data && result.data.error) || ('Server error ' + result.status));
+          return;
+        }
+        var d = result.data;
+        var answer = d.answer || '(no answer returned)';
+        var stats = d.stats || {};
+        var statStr = 'Tokens: ' + (stats.tokens_used || 0) + ' | Subcalls: ' + (stats.subcalls_made || 0) + ' | Time: ' + (stats.elapsed_seconds || 0).toFixed(2) + 's';
+        
+        showResult('⚡ RLM Response',
+          '<p class="insight-text">' + escapeHtml(answer).replace(/\n/g, '<br>') + '</p>' +
+          '<p class="insight-sub">' + escapeHtml(statStr) + '</p>');
+        setStatus('RLM Query complete.', false);
+      })
+      .catch(function(err) {
+        disableAll(false);
+        setLoading('rlm-btn', false);
         showError('Network error: ' + err.message);
       });
     }
